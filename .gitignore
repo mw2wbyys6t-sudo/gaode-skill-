@@ -1,0 +1,22 @@
+# API Keys - NEVER upload secrets
+config.json
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Generated output
+tour-map.html
+output/
+
+# QoderWork internal metadata
+_meta.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

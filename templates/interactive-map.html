@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>次元旅人 - 智慧旅游路线规划</title>
+  <style>
+    /* ========== 全局样式与变量 ========== */
+    :root {
+      --primary: #1677ff;
+      --primary-light: #e6f4ff;
+      --primary-dark: #0958d9;
+      --accent: #52c41a;
+      --accent-light: #f6ffed;
+      --warm-bg: #faf8f5;
+      --card-bg: #ffffff;
+      --text-primary: #1f1f1f;
+      --text-secondary: #666666;
+      --text-muted: #999999;
+      --border: #f0f0f0;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --sidebar-width: 380px;
+      --header-height: 72px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+        'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+      background: var(--warm-bg);
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ========== 顶部导航栏 ========== */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--header-height);
+      background: linear-gradient(135deg, #1677ff 0%, #0958d9 50%, #003eb3 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 1000;
+      box-shadow: 0 2px 12px rgba(22, 119, 255, 0.3);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-logo {
+      width: 40px;
+      height: 40px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      backdrop-filter: blur(8px);
+    }
+
+    .header-title {
+      color: #ffffff;
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .header-subtitle {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+      margin-top: 2px;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .stat-badge {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 6px 16px;
+      color: #ffffff;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-badge .stat-icon {
+      font-size: 15px;
+    }
+
+    .stat-badge .stat-value {
+      font-weight: 600;
+    }
+
+    /* ========== 主体布局 ========== */
+    .main-container {
+      display: flex;
+      height: 100vh;
+      padding-top: var(--header-height);
+    }
+
+    /* ========== 地图区域 ========== */
+    .map-container {
+      flex: 1;
+      position: relative;
+      height: 100%;
+    }
+
+    #mapView {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ========== 侧边栏行程面板 ========== */
+    .sidebar {
+      width: var(--sidebar-width);
+      height: 100%;
+      background: var(--card-bg);
+      border-left: 1px solid var(--border);
+      overflow-y: auto;
+      overflow-x: hidden;
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: #d9d9d9;
+      border-radius: 4px;
+    }
+
+    .sidebar-header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--card-bg);
+      z-index: 10;
+    }
+
+    .sidebar-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-summary {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .summary-tag {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .summary-tag.time {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .summary-tag.walk {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+
+    .summary-tag.count {
+      background: #fff7e6;
+      color: #fa8c16;
+    }
+
+    /* ========== 行程卡片列表 ========== */
+    .itinerary-list {
+      padding: 12px 16px 24px;
+    }
+
+    .itinerary-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .itinerary-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--primary);
+      border-radius: 4px 0 0 4px;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .itinerary-card:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
+    }
+
+    .itinerary-card:hover::before {
+      opacity: 1;
+    }
+
+    .itinerary-card.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .itinerary-card.active::before {
+      opacity: 1;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .card-index {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .card-address {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .card-duration {
+      font-size: 12px;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+
+    .card-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .card-tag {
+      font-size: 11px;
+      color: var(--text-secondary);
+      background: #f5f5f5;
+      padding: 2px 8px;
+      border-radius: 8px;
+    }
+
+    /* ========== 步行连接线 ========== */
+    .walking-segment {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 0;
+      color: var(--text-muted);
+      font-size: 12px;
+      gap: 8px;
+    }
+
+    .walking-line {
+      width: 1px;
+      height: 16px;
+      background: #d9d9d9;
+    }
+
+    .walking-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #d9d9d9;
+    }
+
+    .walking-text {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* ========== 地图信息弹窗 ========== */
+    .amap-info-content {
+      padding: 0 !important;
+    }
+
+    .poi-popup {
+      min-width: 220px;
+      padding: 16px;
+    }
+
+    .poi-popup-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .poi-popup-row {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .poi-popup-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .poi-popup-tag {
+      font-size: 11px;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 2px 8px;
+      border-radius: 8px;
+    }
+
+    /* ========== 自定义地图标记 ========== */
+    .custom-marker {
+      position: relative;
+      animation: markerDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+
+    @keyframes markerDrop {
+      0% {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.8);
+      }
+      60% {
+        opacity: 1;
+        transform: translateY(4px) scale(1.05);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes markerPulse {
+      0%, 100% { box-shadow: 0 2px 8px rgba(22, 119, 255, 0.3); }
+      50% { box-shadow: 0 2px 16px rgba(22, 119, 255, 0.6); }
+    }
+
+    .marker-pin {
+      width: 36px;
+      height: 36px;
+      border-radius: 50% 50% 50% 0;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(22, 119, 255, 0.3);
+      border: 3px solid #ffffff;
+      animation: markerPulse 2s ease-in-out infinite;
+    }
+
+    .marker-pin .marker-number {
+      transform: rotate(45deg);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* ========== 美食标记（橙色药丸形） ========== */
+    .marker-food {
+      width: 40px;
+      height: 28px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #fa8c16, #d46b08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(250, 140, 22, 0.4);
+      border: 2px solid #ffffff;
+      animation: foodPulse 2s ease-in-out infinite;
+      font-size: 16px;
+    }
+
+    @keyframes foodPulse {
+      0%, 100% { box-shadow: 0 2px 8px rgba(250, 140, 22, 0.3); }
+      50% { box-shadow: 0 2px 16px rgba(250, 140, 22, 0.6); }
+    }
+
+    /* ========== 美食行程卡片 ========== */
+    .itinerary-card.food-card::before {
+      background: #fa8c16;
+    }
+
+    .itinerary-card.food-card:hover {
+      border-color: #fa8c16;
+    }
+
+    .itinerary-card.food-card.active {
+      border-color: #fa8c16;
+      background: #fff7e6;
+    }
+
+    .card-index.food-index {
+      background: linear-gradient(135deg, #fa8c16, #d46b08);
+      font-size: 14px;
+    }
+
+    .card-cuisine {
+      font-size: 12px;
+      color: #fa8c16;
+      background: #fff7e6;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+
+    .card-cost {
+      font-size: 12px;
+      color: #52c41a;
+      background: #f6ffed;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+
+    .meal-badge {
+      font-size: 11px;
+      color: #ffffff;
+      background: linear-gradient(135deg, #fa8c16, #d46b08);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    /* ========== 用餐步行段（橙色虚线） ========== */
+    .walking-segment.meal-segment .walking-text {
+      color: #fa8c16;
+    }
+
+    .walking-segment.meal-segment .walking-line {
+      background: #fa8c16;
+      opacity: 0.5;
+    }
+
+    .walking-segment.meal-segment .walking-dot {
+      background: #fa8c16;
+    }
+
+    /* ========== 美食弹窗导航按钮 ========== */
+    .poi-popup-nav-btn {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 6px 14px;
+      background: linear-gradient(135deg, #1677ff, #0958d9);
+      color: #ffffff;
+      border-radius: 8px;
+      font-size: 12px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .poi-popup-nav-btn.food-nav {
+      background: linear-gradient(135deg, #fa8c16, #d46b08);
+    }
+
+    /* ========== 移动端适配 ========== */
+    .sidebar-toggle {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #ffffff;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 1001;
+      box-shadow: var(--shadow-lg);
+      transition: transform 0.2s ease;
+    }
+
+    .sidebar-toggle:active {
+      transform: scale(0.92);
+    }
+
+    @media (max-width: 768px) {
+      :root {
+        --sidebar-width: 100vw;
+        --header-height: 60px;
+      }
+
+      .header {
+        padding: 0 16px;
+      }
+
+      .header-logo {
+        width: 34px;
+        height: 34px;
+        font-size: 18px;
+      }
+
+      .header-title {
+        font-size: 16px;
+      }
+
+      .header-subtitle {
+        display: none;
+      }
+
+      .header-stats {
+        gap: 8px;
+      }
+
+      .stat-badge {
+        padding: 4px 10px;
+        font-size: 12px;
+      }
+
+      .sidebar {
+        position: fixed;
+        top: var(--header-height);
+        right: 0;
+        bottom: 0;
+        z-index: 999;
+        transform: translateX(100%);
+        width: 100%;
+        max-width: 400px;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      .sidebar-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .itinerary-list {
+        padding-bottom: 100px;
+      }
+    }
+
+    /* ========== 加载动画 ========== */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--warm-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      margin-top: 16px;
+      font-size: 15px;
+      color: var(--text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 加载遮罩 -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载地图...</div>
+  </div>
+
+  <!-- 顶部导航 -->
+  <header class="header">
+    <div class="header-left">
+      <div class="header-logo">&#x1F3D4;</div>
+      <div>
+        <div class="header-title" id="headerTitle">次元旅人 - 智慧旅游规划</div>
+        <div class="header-subtitle" id="headerSubtitle">智能路线 · 轻松游览</div>
+      </div>
+    </div>
+    <div class="header-stats" id="headerStats"></div>
+  </header>
+
+  <!-- 主体内容 -->
+  <div class="main-container">
+    <!-- 地图 -->
+    <div class="map-container">
+      <div id="mapView"></div>
+    </div>
+
+    <!-- 行程面板 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">&#x1F4CB; 游览行程</div>
+        <div class="sidebar-summary" id="sidebarSummary"></div>
+      </div>
+      <div class="itinerary-list" id="itineraryList"></div>
+    </aside>
+  </div>
+
+  <!-- 移动端侧边栏开关 -->
+  <button class="sidebar-toggle" id="sidebarToggle" aria-label="切换行程面板">&#x1F4CB;</button>
+
+  <!-- 高德地图 JSAPI v2.0 安全配置 + 直接加载 -->
+  <script type="text/javascript">
+    window._AMapSecurityConfig = {
+      securityJsCode: '__SECURITY_CODE__'
+    };
+  </script>
+  <script src="https://webapi.amap.com/maps?v=2.0&key=__AMAP_KEY__&plugin=AMap.Walking,AMap.Geolocation"></script>
+
+  <script>
+    // ========================================================
+    // 次元旅人 - 交互式旅游地图可视化
+    // ========================================================
+
+    // 地图路线数据（占位符，运行时被替换）
+    const MAP_DATA = __MAP_DATA__;
+
+    // 高德 JSAPI Key
+    const AMAP_KEY = '__AMAP_KEY__';
+
+    // 全局地图实例
+    let mapInstance = null;
+    let infoWindow = null;
+    let markers = [];
+
+    /**
+     * 初始化高德地图
+     * AMap JSAPI v2.0 已通过 script 标签直接加载，全局可用 window.AMap
+     */
+    function initMap() {
+      try {
+        var AMap = window.AMap;
+        if (!AMap) {
+          throw new Error('高德地图 JSAPI 未加载，请检查 Key 和网络连接');
+        }
+
+        // 创建地图实例
+        mapInstance = new AMap.Map('mapView', {
+          zoom: 14,
+          viewMode: '2D',
+          mapStyle: 'amap://styles/whitesmoke',
+          resizeEnable: true,
+          touchZoom: true,
+          scrollWheel: true
+        });
+
+        // 创建全局信息窗口
+        infoWindow = new AMap.InfoWindow({
+          offset: new AMap.Pixel(0, -40),
+          closeWhenClickMap: true,
+          isCustom: false
+        });
+
+        // 渲染标记点
+        renderMarkers(AMap);
+
+        // 渲染步行路线
+        renderRoutes(AMap);
+
+        // 自动调整视野
+        autoFitView();
+
+        // 渲染侧边栏
+        renderSidebar();
+
+        // 渲染头部统计
+        renderHeaderStats();
+
+        // 隐藏加载动画
+        setTimeout(function () {
+          document.getElementById('loadingOverlay').classList.add('hidden');
+        }, 600);
+
+      } catch (err) {
+        console.error('地图初始化失败:', err);
+        var loadingText = document.querySelector('.loading-text');
+        if (loadingText) {
+          loadingText.textContent = '地图加载失败: ' + err.message;
+        }
+      }
+    }
+
+    /**
+     * 渲染所有 POI 标记点
+     */
+    function renderMarkers(AMap) {
+      const pois = MAP_DATA.pois || [];
+
+      pois.forEach((poi, idx) => {
+        // 创建自定义标记 DOM
+        const markerEl = document.createElement('div');
+        markerEl.className = 'custom-marker';
+        markerEl.style.animationDelay = (idx * 0.1) + 's';
+
+        const category = poi._category || 'scenic';
+        const isMeal = poi._is_meal_stop;
+
+        if (category === 'food' || category === 'drink') {
+          // 美食/茶饮标记：橙色药丸形
+          const icon = isMeal ? '\uD83C\uDF7D\uFE0F' : '\uD83C\uDF5C';
+          markerEl.innerHTML = '<div class="marker-food">' + icon + '</div>';
+        } else {
+          // 景区标记：蓝色水滴形
+          markerEl.innerHTML =
+            '<div class="marker-pin">' +
+              '<span class="marker-number">' + (idx + 1) + '</span>' +
+            '</div>';
+        }
+
+        // 创建标记实例（美食标记偏移不同）
+        const isFoodType = (category === 'food' || category === 'drink');
+        const marker = new AMap.Marker({
+          position: new AMap.LngLat(poi.lng, poi.lat),
+          content: markerEl,
+          offset: isFoodType
+            ? new AMap.Pixel(-20, -28)
+            : new AMap.Pixel(-18, -36),
+          extData: poi
+        });
+
+        // 点击标记显示信息窗口
+        marker.on('click', function (e) {
+          const data = e.target.getExtData();
+          showInfoWindow(data, e.target.getPosition());
+          highlightCard(data.index);
+        });
+
+        marker.setMap(mapInstance);
+        markers.push(marker);
+      });
+    }
+
+    /**
+     * 显示 POI 信息弹窗
+     */
+    function showInfoWindow(poi, position) {
+      const category = poi._category || 'scenic';
+      const isFood = (category === 'food' || category === 'drink');
+
+      const tagsHtml = (poi.tags || [])
+        .map(function (t) { return '<span class="poi-popup-tag">' + t + '</span>'; })
+        .join('');
+
+      const durationText = poi.duration_min >= 60
+        ? Math.floor(poi.duration_min / 60) + '小时' +
+          (poi.duration_min % 60 > 0 ? poi.duration_min % 60 + '分钟' : '')
+        : poi.duration_min + '分钟';
+
+      // 美食专属信息
+      var foodInfo = '';
+      if (isFood) {
+        if (poi._cuisine_type) {
+          foodInfo += '<div class="poi-popup-row">\uD83C\uDF73 ' + poi._cuisine_type + '</div>';
+        }
+        if (poi._avg_cost) {
+          foodInfo += '<div class="poi-popup-row">\uD83D\uDCB0 人均 ' + poi._avg_cost + ' 元</div>';
+        }
+        if (poi._is_meal_stop) {
+          var mealLabels = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '下午茶' };
+          foodInfo += '<div class="poi-popup-row">\uD83C\uDF7D\uFE0F 推荐：' +
+            (mealLabels[poi._meal_time] || '用餐') + '</div>';
+        }
+      }
+
+      // 导航按钮（高德导航跳转）
+      var navBtnClass = isFood ? 'poi-popup-nav-btn food-nav' : 'poi-popup-nav-btn';
+      var navUrl = 'https://uri.amap.com/navigation?to=' +
+        poi.lng + ',' + poi.lat + ',' + encodeURIComponent(poi.name) +
+        '&mode=walk&src=ciyuanlvren';
+      var navBtn = '<a class="' + navBtnClass + '" href="' + navUrl +
+        '" target="_blank">\uD83E\uDDED 导航前往</a>';
+
+      var titleIcon = isFood ? '\uD83C\uDF5C ' : '';
+
+      const content =
+        '<div class="poi-popup">' +
+          '<div class="poi-popup-title">' + titleIcon + poi.name + '</div>' +
+          '<div class="poi-popup-row">\uD83D\uDCCD ' + (poi.address || '暂无地址信息') + '</div>' +
+          '<div class="poi-popup-row">\u23F1 ' +
+            (isFood ? '用餐约 ' : '建议游览: ') + durationText + '</div>' +
+          foodInfo +
+          (tagsHtml ? '<div class="poi-popup-tags">' + tagsHtml + '</div>' : '') +
+          navBtn +
+        '</div>';
+
+      infoWindow.setContent(content);
+      infoWindow.open(mapInstance, position);
+    }
+
+    /**
+     * 渲染步行路线折线
+     */
+    function renderRoutes(AMap) {
+      const segments = MAP_DATA.segments || [];
+
+      segments.forEach(function (seg) {
+        const path = (seg.coords || []).map(function (c) {
+          return new AMap.LngLat(c[0], c[1]);
+        });
+
+        if (path.length < 2) {
+          // 坐标不足时，用起终点直线连接
+          const fromPoi = MAP_DATA.pois[seg.from_index];
+          const toPoi = MAP_DATA.pois[seg.to_index];
+          if (fromPoi && toPoi) {
+            path.push(
+              new AMap.LngLat(fromPoi.lng, fromPoi.lat),
+              new AMap.LngLat(toPoi.lng, toPoi.lat)
+            );
+          }
+        }
+
+        if (path.length >= 2) {
+          // 根据是否为用餐段选择不同样式
+          const isMealSeg = seg._is_meal_segment;
+          const polyline = new AMap.Polyline({
+            path: path,
+            strokeColor: isMealSeg ? '#fa8c16' : '#1677ff',
+            strokeWeight: isMealSeg ? 4 : 5,
+            strokeOpacity: 0.75,
+            strokeStyle: isMealSeg ? 'dashed' : 'solid',
+            strokeDash: isMealSeg ? [10, 6] : undefined,
+            lineJoin: 'round',
+            lineCap: 'round',
+            showDir: true
+          });
+          polyline.setMap(mapInstance);
+        }
+      });
+    }
+
+    /**
+     * 自动调整地图视野以显示所有标记
+     */
+    function autoFitView() {
+      if (markers.length === 0) return;
+
+      // 收集所有覆盖物
+      const overlays = markers.slice();
+      mapInstance.setFitView(overlays, false, [80, 80, 80, 420]);
+    }
+
+    /**
+     * 渲染头部统计信息
+     */
+    function renderHeaderStats() {
+      const statsEl = document.getElementById('headerStats');
+      const scenicName = MAP_DATA.scenic_name || '景区';
+      const totalDuration = MAP_DATA.total_duration_min || 0;
+      const totalWalking = MAP_DATA.total_walking_min || 0;
+      const scenicCount = MAP_DATA.scenic_count || 0;
+      const foodCount = MAP_DATA.food_count || 0;
+
+      document.getElementById('headerTitle').textContent =
+        scenicName + ' - 次元旅人';
+
+      const durationText = totalDuration >= 60
+        ? Math.floor(totalDuration / 60) + 'h' +
+          (totalDuration % 60 > 0 ? totalDuration % 60 + 'm' : '')
+        : totalDuration + 'min';
+
+      var statsHtml =
+        '<div class="stat-badge">' +
+          '<span class="stat-icon">\uD83C\uDFDE\uFE0F</span>' +
+          '<span class="stat-value">' + scenicCount + '</span> 个景点' +
+        '</div>' +
+        '<div class="stat-badge">' +
+          '<span class="stat-icon">\u23F1</span>' +
+          '<span class="stat-value">' + durationText + '</span>' +
+        '</div>' +
+        '<div class="stat-badge">' +
+          '<span class="stat-icon">\uD83D\uDEB6</span>' +
+          '<span class="stat-value">' + totalWalking + 'min</span> 步行' +
+        '</div>';
+
+      if (foodCount > 0) {
+        statsHtml +=
+          '<div class="stat-badge">' +
+            '<span class="stat-icon">\uD83C\uDF5C</span>' +
+            '<span class="stat-value">' + foodCount + '</span> 家美食' +
+          '</div>';
+      }
+
+      statsEl.innerHTML = statsHtml;
+    }
+
+    /**
+     * 渲染侧边栏行程列表
+     */
+    function renderSidebar() {
+      const pois = MAP_DATA.pois || [];
+      const segments = MAP_DATA.segments || [];
+      const summaryEl = document.getElementById('sidebarSummary');
+      const listEl = document.getElementById('itineraryList');
+
+      // 摘要标签
+      const totalDuration = MAP_DATA.total_duration_min || 0;
+      const totalWalking = MAP_DATA.total_walking_min || 0;
+      const scenicCount = MAP_DATA.scenic_count || 0;
+      const foodCount = MAP_DATA.food_count || 0;
+
+      const durationText = totalDuration >= 60
+        ? Math.floor(totalDuration / 60) + '小时' +
+          (totalDuration % 60 > 0 ? totalDuration % 60 + '分钟' : '')
+        : totalDuration + '分钟';
+
+      var summaryHtml =
+        '<span class="summary-tag time">\u23F1 总计 ' + durationText + '</span>' +
+        '<span class="summary-tag walk">\uD83D\uDEB6 步行 ' + totalWalking + '分钟</span>';
+
+      if (scenicCount > 0) {
+        summaryHtml += '<span class="summary-tag count">\uD83C\uDFDE\uFE0F ' + scenicCount + '个景点</span>';
+      }
+      if (foodCount > 0) {
+        summaryHtml += '<span class="summary-tag count">\uD83C\uDF5C ' + foodCount + '家美食</span>';
+      }
+      if (scenicCount === 0 && foodCount === 0) {
+        summaryHtml += '<span class="summary-tag count">\uD83D\uDCCD ' + pois.length + '个地点</span>';
+      }
+
+      summaryEl.innerHTML = summaryHtml;
+
+      // 用餐时间标签映射
+      var mealLabels = { breakfast: '\uD83C\uDF73 早餐', lunch: '\uD83C\uDF5C 午餐', dinner: '\uD83C\uDF19 晚餐', snack: '\uD83C\uDF75 下午茶' };
+
+      // 行程卡片
+      let html = '';
+      var scenicIdx = 0; // 景区序号（只对景区递增）
+
+      pois.forEach(function (poi, idx) {
+        var category = poi._category || 'scenic';
+        var isFood = (category === 'food' || category === 'drink');
+
+        const durationStr = poi.duration_min >= 60
+          ? Math.floor(poi.duration_min / 60) + 'h' +
+            (poi.duration_min % 60 > 0 ? poi.duration_min % 60 + 'm' : '')
+          : poi.duration_min + '分钟';
+
+        const tagsHtml = (poi.tags || [])
+          .map(function (t) { return '<span class="card-tag">' + t + '</span>'; })
+          .join('');
+
+        if (isFood) {
+          // ── 美食卡片（橙色主题）──
+          var cardClass = 'itinerary-card food-card';
+          var indexHtml;
+
+          if (poi._is_meal_stop) {
+            var mealLabel = mealLabels[poi._meal_time] || '\uD83C\uDF5C 用餐';
+            indexHtml = '<div class="card-index food-index">\uD83C\uDF5C</div>';
+            // 用餐标记上方显示时间标签
+            html +=
+              '<div class="walking-segment meal-segment">' +
+                '<span class="meal-badge">' + mealLabel + '</span>' +
+              '</div>';
+          } else {
+            indexHtml = '<div class="card-index food-index">\uD83C\uDF5C</div>';
+          }
+
+          var cuisineHtml = '';
+          if (poi._cuisine_type) {
+            cuisineHtml = '<span class="card-cuisine">' + poi._cuisine_type + '</span>';
+          }
+          var costHtml = '';
+          if (poi._avg_cost) {
+            costHtml = '<span class="card-cost">\uD83D\uDCB0 ' + poi._avg_cost + '元/人</span>';
+          }
+
+          html +=
+            '<div class="' + cardClass + '" data-index="' + idx + '" onclick="onCardClick(' + idx + ')">' +
+              '<div class="card-header">' +
+                indexHtml +
+                '<div class="card-info">' +
+                  '<div class="card-name">' + poi.name + '</div>' +
+                  '<div class="card-address">' + (poi.address || '') + '</div>' +
+                  '<div class="card-meta">' +
+                    '<span class="card-duration">\u23F1 ' + durationStr + '</span>' +
+                    cuisineHtml + costHtml +
+                    '<div class="card-tags">' + tagsHtml + '</div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+        } else {
+          // ── 景区卡片（蓝色主题）──
+          scenicIdx++;
+          html +=
+            '<div class="itinerary-card" data-index="' + idx + '" onclick="onCardClick(' + idx + ')">' +
+              '<div class="card-header">' +
+                '<div class="card-index">' + scenicIdx + '</div>' +
+                '<div class="card-info">' +
+                  '<div class="card-name">' + poi.name + '</div>' +
+                  '<div class="card-address">' + (poi.address || '') + '</div>' +
+                  '<div class="card-meta">' +
+                    '<span class="card-duration">\u23F1 ' + durationStr + '</span>' +
+                    '<div class="card-tags">' + tagsHtml + '</div>' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+            '</div>';
+        }
+
+        // 步行连接段
+        const seg = segments.find(function (s) { return s.from_index === idx; });
+        if (seg && idx < pois.length - 1) {
+          var isMealSeg = seg._is_meal_segment;
+          var segClass = isMealSeg ? 'walking-segment meal-segment' : 'walking-segment';
+          html +=
+            '<div class="' + segClass + '">' +
+              '<div class="walking-line"></div>' +
+              '<div class="walking-dot"></div>' +
+              '<span class="walking-text">\uD83D\uDEB6 步行 ' + seg.walking_min + ' 分钟</span>' +
+              '<div class="walking-dot"></div>' +
+              '<div class="walking-line"></div>' +
+            '</div>';
+        }
+      });
+
+      listEl.innerHTML = html;
+    }
+
+    /**
+     * 点击行程卡片 → 地图联动
+     */
+    function onCardClick(index) {
+      const poi = MAP_DATA.pois[index];
+      if (!poi || !mapInstance) return;
+
+      // 高亮卡片
+      highlightCard(index);
+
+      // 地图居中到对应标记
+      mapInstance.setZoomAndCenter(16, [poi.lng, poi.lat], false, 500);
+
+      // 打开信息窗口
+      const marker = markers[index];
+      if (marker) {
+        showInfoWindow(poi, marker.getPosition());
+      }
+    }
+
+    /**
+     * 高亮指定卡片
+     */
+    function highlightCard(index) {
+      document.querySelectorAll('.itinerary-card').forEach(function (card) {
+        card.classList.remove('active');
+      });
+      const target = document.querySelector('.itinerary-card[data-index="' + index + '"]');
+      if (target) {
+        target.classList.add('active');
+        target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    // ========================================================
+    // 移动端侧边栏交互
+    // ========================================================
+    (function () {
+      var toggleBtn = document.getElementById('sidebarToggle');
+      var sidebar = document.getElementById('sidebar');
+      var isOpen = false;
+
+      toggleBtn.addEventListener('click', function () {
+        isOpen = !isOpen;
+        sidebar.classList.toggle('open', isOpen);
+        toggleBtn.textContent = isOpen ? '\u2715' : '\uD83D\uDCCB';
+      });
+    })();
+
+    // ========================================================
+    // 启动地图
+    // ========================================================
+    initMap();
+  </script>
+</body>
+</html>

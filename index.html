@@ -1,0 +1,2800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>次元旅人 - 启程</title>
+  <style>
+    /* ============================================================
+       Reset & Base
+       ============================================================ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+      overflow: hidden;
+      background: #0a0a1a;
+      color: #e8e0f0;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ============================================================
+       Login Scene — full-screen overlay
+       ============================================================ */
+    #loginScene {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    #loginScene.fade-out {
+      opacity: 0;
+      transform: scale(1.05);
+      pointer-events: none;
+    }
+
+    /* --- Animated starfield background --- */
+    .starfield {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .starfield::before,
+    .starfield::after {
+      content: '';
+      position: absolute;
+      inset: -50%;
+      background-image:
+        radial-gradient(1.5px 1.5px at 20px 30px, #fff, transparent),
+        radial-gradient(1px 1px at 40px 70px, rgba(180,160,255,0.8), transparent),
+        radial-gradient(1.2px 1.2px at 90px 40px, rgba(255,200,230,0.7), transparent),
+        radial-gradient(1px 1px at 130px 80px, #fff, transparent),
+        radial-gradient(1.5px 1.5px at 160px 30px, rgba(160,200,255,0.9), transparent);
+      background-size: 200px 100px;
+      animation: starScroll 120s linear infinite;
+    }
+    .starfield::after {
+      background-image:
+        radial-gradient(1px 1px at 50px 120px, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1.3px 1.3px at 100px 50px, rgba(200,180,255,0.5), transparent),
+        radial-gradient(0.8px 0.8px at 75px 90px, #fff, transparent);
+      background-size: 150px 150px;
+      animation: starScroll 180s linear infinite reverse;
+      opacity: 0.7;
+    }
+    @keyframes starScroll {
+      from { transform: translateY(0); }
+      to   { transform: translateY(200px); }
+    }
+
+    /* --- Gradient aurora --- */
+    .aurora {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 80%, rgba(100, 40, 180, 0.25), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(40, 80, 180, 0.2), transparent),
+        radial-gradient(ellipse 70% 60% at 50% 50%, rgba(120, 60, 200, 0.08), transparent);
+      animation: auroraPulse 8s ease-in-out infinite alternate;
+    }
+    @keyframes auroraPulse {
+      0%   { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+
+    /* --- Floating sakura petals --- */
+    .petal {
+      position: absolute;
+      z-index: 2;
+      width: 12px;
+      height: 12px;
+      border-radius: 50% 0 50% 0;
+      opacity: 0;
+      animation: petalFall linear infinite;
+    }
+    @keyframes petalFall {
+      0%   { transform: translateY(-20px) rotate(0deg) scale(0.5); opacity: 0; }
+      10%  { opacity: 0.7; }
+      90%  { opacity: 0.5; }
+      100% { transform: translateY(105vh) rotate(720deg) scale(1); opacity: 0; }
+    }
+
+    /* --- Glass card --- */
+    .login-card {
+      position: relative;
+      z-index: 10;
+      width: 420px;
+      max-width: 90vw;
+      padding: 48px 40px 40px;
+      background: rgba(20, 15, 40, 0.55);
+      border: 1px solid rgba(160, 130, 255, 0.2);
+      border-radius: 24px;
+      backdrop-filter: blur(20px) saturate(1.4);
+      -webkit-backdrop-filter: blur(20px) saturate(1.4);
+      box-shadow:
+        0 0 60px rgba(120, 80, 220, 0.15),
+        0 20px 60px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      text-align: center;
+      animation: cardFloat 6s ease-in-out infinite;
+    }
+    @keyframes cardFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
+
+    /* --- Logo area --- */
+    .logo-circle {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 24px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #3b82f6, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 0 30px rgba(124, 58, 237, 0.4);
+      animation: logoGlow 3s ease-in-out infinite alternate;
+      position: relative;
+    }
+    .logo-circle::after {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-top-color: rgba(167, 139, 250, 0.6);
+      border-right-color: rgba(96, 165, 250, 0.3);
+      animation: logoSpin 4s linear infinite;
+    }
+    @keyframes logoGlow {
+      0%   { box-shadow: 0 0 20px rgba(124, 58, 237, 0.3); }
+      100% { box-shadow: 0 0 40px rgba(124, 58, 237, 0.6), 0 0 80px rgba(59, 130, 246, 0.2); }
+    }
+    @keyframes logoSpin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    .brand-title {
+      font-size: 36px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #c4b5fd, #93c5fd, #f0abfc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 6px;
+      margin-bottom: 8px;
+    }
+
+    .brand-subtitle {
+      font-size: 14px;
+      color: rgba(196, 181, 253, 0.6);
+      letter-spacing: 3px;
+      margin-bottom: 36px;
+    }
+
+    /* --- Input fields --- */
+    .input-group {
+      margin-bottom: 16px;
+      text-align: left;
+    }
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      color: rgba(196, 181, 253, 0.5);
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(160, 130, 255, 0.15);
+      border-radius: 12px;
+      color: #e8e0f0;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .input-group input::placeholder {
+      color: rgba(196, 181, 253, 0.3);
+    }
+    .input-group input:focus {
+      border-color: rgba(139, 92, 246, 0.6);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.15);
+    }
+
+    /* --- Login button --- */
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      margin-top: 24px;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 4px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #7c3aed, #6366f1, #3b82f6);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+      transition: transform 0.2s, box-shadow 0.3s;
+    }
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 30px rgba(99, 102, 241, 0.6);
+    }
+    .login-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+    .login-btn::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -60%;
+      width: 40%;
+      height: 200%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transform: skewX(-20deg);
+      animation: btnShine 3s ease-in-out infinite;
+    }
+    @keyframes btnShine {
+      0%, 100% { left: -60%; }
+      50%      { left: 120%; }
+    }
+
+    /* --- Footer links --- */
+    .login-footer {
+      margin-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+    .login-footer a {
+      color: rgba(167, 139, 250, 0.5);
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+    .login-footer a:hover {
+      color: rgba(167, 139, 250, 0.9);
+    }
+
+    /* --- Version badge --- */
+    .version-badge {
+      position: absolute;
+      bottom: 20px;
+      right: 24px;
+      z-index: 10;
+      font-size: 11px;
+      color: rgba(160, 130, 255, 0.25);
+      letter-spacing: 1px;
+    }
+
+    /* ============================================================
+       Main App (hidden initially, revealed after login)
+       ============================================================ */
+    #mainApp {
+      display: none;
+      width: 100%;
+      height: 100vh;
+    }
+    #mainApp.visible {
+      display: block;
+    }
+    #mainApp iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* --- App header bar --- */
+    .app-topbar {
+      height: 48px;
+      background: rgba(15, 12, 30, 0.9);
+      border-bottom: 1px solid rgba(160, 130, 255, 0.1);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      backdrop-filter: blur(10px);
+    }
+    .app-topbar .topbar-brand {
+      font-size: 16px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #c4b5fd, #93c5fd);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 3px;
+    }
+    .app-topbar .topbar-user {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: rgba(196, 181, 253, 0.6);
+    }
+    .topbar-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #3b82f6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    /* --- Welcome panel (shown before trip planning) --- */
+    .welcome-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: calc(100vh - 48px);
+      padding: 40px;
+      text-align: center;
+      background: linear-gradient(180deg, rgba(10,10,26,1) 0%, rgba(20,15,40,1) 100%);
+    }
+    .welcome-panel h1 {
+      font-size: 32px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #c4b5fd, #93c5fd, #f0abfc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 12px;
+    }
+    .welcome-panel p {
+      color: rgba(196, 181, 253, 0.5);
+      font-size: 15px;
+      margin-bottom: 32px;
+      max-width: 500px;
+      line-height: 1.7;
+    }
+
+    /* --- Trip planner input area --- */
+    .planner-box {
+      width: 560px;
+      max-width: 90vw;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(160, 130, 255, 0.12);
+      border-radius: 20px;
+      padding: 32px;
+      backdrop-filter: blur(12px);
+    }
+    .planner-box textarea {
+      width: 100%;
+      height: 80px;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(160, 130, 255, 0.15);
+      border-radius: 12px;
+      color: #e8e0f0;
+      font-size: 15px;
+      resize: none;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .planner-box textarea::placeholder {
+      color: rgba(196, 181, 253, 0.3);
+    }
+    .planner-box textarea:focus {
+      border-color: rgba(139, 92, 246, 0.5);
+      box-shadow: 0 0 20px rgba(139, 92, 246, 0.12);
+    }
+    .planner-box .planner-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .planner-box .planner-actions input {
+      flex: 1;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(160, 130, 255, 0.12);
+      border-radius: 10px;
+      color: #e8e0f0;
+      font-size: 14px;
+      outline: none;
+    }
+    .planner-box .planner-actions input::placeholder {
+      color: rgba(196, 181, 253, 0.25);
+    }
+    .planner-go-btn {
+      padding: 10px 28px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #7c3aed, #6366f1);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.3s;
+      white-space: nowrap;
+    }
+    .planner-go-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.5);
+    }
+
+    /* --- Quick examples --- */
+    .quick-examples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+      justify-content: center;
+    }
+    .example-chip {
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      font-size: 12px;
+      color: rgba(196, 181, 253, 0.6);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .example-chip:hover {
+      background: rgba(139, 92, 246, 0.2);
+      color: rgba(196, 181, 253, 0.9);
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+
+    /* --- Map result view --- */
+    .map-result {
+      display: none;
+      flex-direction: column;
+      height: calc(100vh - 48px);
+    }
+    .map-result.visible {
+      display: flex;
+    }
+    .map-result-bar {
+      height: 44px;
+      background: rgba(15, 12, 30, 0.85);
+      border-bottom: 1px solid rgba(160, 130, 255, 0.1);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 16px;
+    }
+    .map-result-bar .result-info {
+      font-size: 13px;
+      color: rgba(196, 181, 253, 0.5);
+      display: flex;
+      gap: 12px;
+    }
+    .map-result-bar .result-info span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .map-back-btn {
+      margin-left: auto;
+      padding: 6px 16px;
+      border: 1px solid rgba(160, 130, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(139, 92, 246, 0.1);
+      color: rgba(196, 181, 253, 0.7);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .map-back-btn:hover {
+      background: rgba(139, 92, 246, 0.2);
+      color: rgba(196, 181, 253, 1);
+    }
+    .map-result #mapViewInner {
+      flex: 1;
+      width: 100%;
+      position: relative;
+    }
+    .map-error {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 12px;
+      color: rgba(196, 181, 253, 0.5);
+      font-size: 14px;
+    }
+    .map-error .error-icon { font-size: 48px; }
+
+    /* --- AMap markers & popups (for dynamic map rendering) --- */
+    .custom-marker {
+      position: relative;
+      animation: markerDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    @keyframes markerDrop {
+      0%   { opacity: 0; transform: translateY(-30px) scale(0.8); }
+      60%  { opacity: 1; transform: translateY(4px) scale(1.05); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes markerPulse {
+      0%, 100% { box-shadow: 0 2px 8px rgba(22, 119, 255, 0.3); }
+      50%      { box-shadow: 0 2px 16px rgba(22, 119, 255, 0.6); }
+    }
+    .marker-pin {
+      width: 36px;
+      height: 36px;
+      border-radius: 50% 50% 50% 0;
+      background: linear-gradient(135deg, #1677ff, #0958d9);
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(22, 119, 255, 0.3);
+      border: 3px solid #ffffff;
+      animation: markerPulse 2s ease-in-out infinite;
+    }
+    .marker-pin .marker-number {
+      transform: rotate(45deg);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* --- Food marker (orange pill) --- */
+    .marker-food {
+      width: 40px; height: 28px; border-radius: 14px;
+      background: linear-gradient(135deg, #fa8c16, #d46b08);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(250, 140, 22, 0.4);
+      border: 2px solid #ffffff;
+      animation: foodPulse 2s ease-in-out infinite;
+      font-size: 16px;
+    }
+    @keyframes foodPulse {
+      0%, 100% { box-shadow: 0 2px 8px rgba(250, 140, 22, 0.3); }
+      50%      { box-shadow: 0 2px 16px rgba(250, 140, 22, 0.6); }
+    }
+
+    /* --- Map view mode switcher (in result bar) --- */
+    .map-mode-switcher {
+      display: flex; gap: 0;
+      border: 1px solid rgba(160, 130, 255, 0.2); border-radius: 8px;
+      overflow: hidden; margin-left: auto; margin-right: 12px;
+    }
+    .map-mode-switcher .map-mode-btn {
+      padding: 4px 12px; border: none; background: rgba(255,255,255,0.03);
+      color: rgba(196, 181, 253, 0.45); font-size: 12px; cursor: pointer;
+      transition: all 0.25s; font-family: inherit; white-space: nowrap;
+    }
+    .map-mode-switcher .map-mode-btn:not(:last-child) {
+      border-right: 1px solid rgba(160, 130, 255, 0.1);
+    }
+    .map-mode-switcher .map-mode-btn.active {
+      background: rgba(139, 92, 246, 0.2); color: #c4b5fd; font-weight: 600;
+    }
+    .map-mode-switcher .map-mode-btn:hover:not(.active) {
+      background: rgba(139, 92, 246, 0.08); color: rgba(196,181,253,0.7);
+    }
+
+    /* --- Food card styles for sidebar --- */
+    .food-card-indicator {
+      width: 4px; position: absolute; left: 0; top: 0; bottom: 0;
+      background: #fa8c16; border-radius: 12px 0 0 12px;
+    }
+    .cuisine-tag {
+      font-size: 11px; color: #fa8c16; background: #fff7e6;
+      padding: 2px 8px; border-radius: 8px; font-weight: 500;
+    }
+    .cost-tag {
+      font-size: 11px; color: #52c41a; background: #f6ffed;
+      padding: 2px 8px; border-radius: 8px; font-weight: 500;
+    }
+    .meal-separator {
+      display: flex; align-items: center; justify-content: center;
+      padding: 6px 0; gap: 8px;
+    }
+    .meal-separator .meal-line { flex: 1; height: 1px; background: rgba(250,140,22,0.3); }
+    .meal-separator .meal-label {
+      font-size: 12px; color: #fa8c16; font-weight: 600;
+      background: linear-gradient(135deg, #fff7e6, #ffe7ba);
+      padding: 3px 12px; border-radius: 12px;
+    }
+    .nav-btn-sidebar {
+      display: inline-block; margin-top: 6px; padding: 3px 10px;
+      background: linear-gradient(135deg, #1677ff, #0958d9);
+      color: #fff; border-radius: 8px; font-size: 11px;
+      text-decoration: none; font-weight: 500;
+    }
+    .nav-btn-sidebar.food-nav {
+      background: linear-gradient(135deg, #fa8c16, #d46b08);
+    }
+    .amap-info-content { padding: 0 !important; }
+    .poi-popup { min-width: 220px; padding: 16px; }
+    .poi-popup-title { font-size: 16px; font-weight: 600; color: #1f1f1f; margin-bottom: 8px; }
+    .poi-popup-row { font-size: 13px; color: #666; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .poi-popup-tags { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .poi-popup-tag { font-size: 11px; color: #1677ff; background: #e6f4ff; padding: 2px 8px; border-radius: 8px; }
+
+    /* --- Voice playback buttons --- */
+    .voice-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 12px;
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 16px;
+      background: rgba(139, 92, 246, 0.08);
+      color: rgba(196, 181, 253, 0.8);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.25s;
+      font-family: inherit;
+      line-height: 1.4;
+    }
+    .voice-btn:hover {
+      background: rgba(139, 92, 246, 0.18);
+      border-color: rgba(139, 92, 246, 0.5);
+      color: rgba(196, 181, 253, 1);
+    }
+    .voice-btn.playing {
+      background: rgba(139, 92, 246, 0.25);
+      border-color: rgba(139, 92, 246, 0.6);
+      color: #c4b5fd;
+      animation: voicePulse 1.5s ease-in-out infinite;
+    }
+    @keyframes voicePulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+      50%      { box-shadow: 0 0 12px 2px rgba(139, 92, 246, 0.3); }
+    }
+    .voice-btn-sidebar {
+      margin-top: 8px;
+      padding: 3px 10px;
+      border-color: #d9d9d9;
+      background: #f9f9f9;
+      color: #666;
+      font-size: 11px;
+    }
+    .voice-btn-sidebar:hover {
+      background: #f0f0f0;
+      border-color: #bbb;
+      color: #333;
+    }
+    .voice-btn-sidebar.playing {
+      background: #e6f4ff;
+      border-color: #1677ff;
+      color: #1677ff;
+    }
+    .voice-engine-badge {
+      position: fixed;
+      bottom: 16px;
+      left: 16px;
+      z-index: 200;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      background: rgba(15, 12, 30, 0.8);
+      border: 1px solid rgba(160, 130, 255, 0.15);
+      color: rgba(167, 139, 250, 0.5);
+      backdrop-filter: blur(8px);
+      display: none;
+    }
+    .voice-engine-badge.visible { display: block; }
+    .welcome-panel.hidden {
+      display: none;
+    }
+
+    /* --- Enhanced POI info: photo, rating, business hours --- */
+    .poi-popup-photo {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      background: #f5f5f5;
+    }
+    .poi-popup-rating {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: #fa8c16;
+      font-weight: 600;
+    }
+    .poi-popup-hours {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+    }
+    .sidebar-poi-photo {
+      width: 52px;
+      height: 52px;
+      min-width: 52px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #f0f0f0;
+    }
+    .sidebar-rating-badge {
+      font-size: 11px;
+      color: #fa8c16;
+      background: #fff7e6;
+      padding: 1px 6px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    /* --- Loading state --- */
+    .planner-loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 32px;
+    }
+    .planner-loading.active {
+      display: flex;
+    }
+    .loading-ring {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(139, 92, 246, 0.15);
+      border-top-color: #8b5cf6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text {
+      font-size: 14px;
+      color: rgba(196, 181, 253, 0.5);
+      letter-spacing: 1px;
+    }
+    .loading-step {
+      font-size: 13px;
+      color: rgba(167, 139, 250, 0.4);
+    }
+
+    /* === 小次聊天面板 === */
+    .chat-toggle-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #6366f1);
+      background-image: url('assets/xiaoci-avatar.png');
+      background-size: cover;
+      background-position: center;
+      border: 3px solid rgba(139, 92, 246, 0.5);
+      cursor: pointer;
+      z-index: 900;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 24px rgba(99, 102, 241, 0.5), 0 0 0 3px rgba(139, 92, 246, 0.15);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      font-size: 0;
+      line-height: 1;
+    }
+    .chat-toggle-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 6px 32px rgba(99, 102, 241, 0.65);
+    }
+    .chat-toggle-btn.visible { display: flex; }
+    .chat-toggle-btn .unread-dot {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #f5222d;
+      border: 2px solid #0a0a1a;
+      display: none;
+    }
+
+    .chat-panel {
+      position: fixed;
+      top: 0;
+      right: -420px;
+      width: 400px;
+      height: 100vh;
+      z-index: 950;
+      display: flex;
+      flex-direction: column;
+      background: rgba(12, 10, 30, 0.92);
+      border-left: 1px solid rgba(160, 130, 255, 0.15);
+      backdrop-filter: blur(24px) saturate(1.4);
+      box-shadow: -8px 0 48px rgba(0,0,0,0.5);
+      transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .chat-panel.open { right: 0; }
+
+    .chat-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(160, 130, 255, 0.12);
+      flex-shrink: 0;
+    }
+    .chat-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #3b82f6);
+      background-image: url('assets/xiaoci-avatar.png');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0;
+      flex-shrink: 0;
+      border: 2px solid rgba(139, 92, 246, 0.3);
+      box-shadow: 0 2px 12px rgba(124, 58, 237, 0.3);
+    }
+    .chat-header-info {
+      flex: 1;
+    }
+    .chat-header-name {
+      font-size: 15px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #c4b5fd, #93c5fd);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .chat-header-status {
+      font-size: 11px;
+      color: rgba(167, 139, 250, 0.5);
+    }
+    .chat-close-btn {
+      background: none;
+      border: none;
+      color: rgba(196, 181, 253, 0.5);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .chat-close-btn:hover {
+      color: #c4b5fd;
+      background: rgba(139, 92, 246, 0.15);
+    }
+
+    /* 聊天语音按钮 */
+    .chat-voice-toggle {
+      background: none;
+      border: 1px solid rgba(160, 130, 255, 0.2);
+      color: rgba(196, 181, 253, 0.45);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: all 0.25s;
+      line-height: 1;
+    }
+    .chat-voice-toggle:hover {
+      color: #c4b5fd;
+      background: rgba(139, 92, 246, 0.15);
+    }
+    .chat-voice-toggle.active {
+      color: #a78bfa;
+      border-color: rgba(139, 92, 246, 0.5);
+      background: rgba(139, 92, 246, 0.12);
+      box-shadow: 0 0 8px rgba(139, 92, 246, 0.2);
+    }
+    .chat-voice-toggle.speaking {
+      animation: chatVoicePulse 1.2s ease-in-out infinite;
+    }
+    @keyframes chatVoicePulse {
+      0%, 100% { box-shadow: 0 0 4px rgba(139, 92, 246, 0.2); }
+      50%      { box-shadow: 0 0 14px rgba(139, 92, 246, 0.5); }
+    }
+
+    /* 气泡上的语音按钮 */
+    .chat-msg-voice-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 6px;
+      padding: 2px 10px;
+      background: rgba(139, 92, 246, 0.1);
+      border: 1px solid rgba(160, 130, 255, 0.15);
+      border-radius: 12px;
+      color: rgba(196, 181, 253, 0.6);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .chat-msg-voice-btn:hover {
+      color: #c4b5fd;
+      background: rgba(139, 92, 246, 0.2);
+      border-color: rgba(160, 130, 255, 0.3);
+    }
+    .chat-msg-voice-btn.playing {
+      color: #a78bfa;
+      background: rgba(139, 92, 246, 0.18);
+      border-color: rgba(139, 92, 246, 0.4);
+      animation: chatVoicePulse 1.2s ease-in-out infinite;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 16px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: rgba(139, 92, 246, 0.25);
+      border-radius: 4px;
+    }
+
+    .chat-msg {
+      max-width: 88%;
+      animation: chatFadeIn 0.3s ease;
+    }
+    @keyframes chatFadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .chat-msg.user {
+      align-self: flex-end;
+    }
+    .chat-msg.assistant {
+      align-self: flex-start;
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .chat-msg-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-image: url('assets/xiaoci-avatar.png');
+      background-size: cover;
+      background-position: center;
+      flex-shrink: 0;
+      border: 1.5px solid rgba(160, 130, 255, 0.25);
+      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+    }
+
+    .chat-msg-content {
+      display: flex;
+      flex-direction: column;
+      max-width: 100%;
+    }
+    .chat-msg-bubble {
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .chat-msg.user .chat-msg-bubble {
+      background: linear-gradient(135deg, #7c3aed, #6366f1);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-msg.assistant .chat-msg-bubble {
+      background: rgba(30, 25, 60, 0.7);
+      border: 1px solid rgba(160, 130, 255, 0.12);
+      color: #e8e0f0;
+      border-bottom-left-radius: 4px;
+    }
+
+    .chat-msg-time {
+      font-size: 10px;
+      color: rgba(167, 139, 250, 0.35);
+      margin-top: 4px;
+      padding: 0 4px;
+    }
+    .chat-msg.user .chat-msg-time { text-align: right; }
+
+    /* 地点/路线标记卡片 */
+    .chat-place-card {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-radius: 8px;
+      padding: 4px 10px;
+      margin: 4px 2px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+    .chat-place-card:hover {
+      background: rgba(99, 102, 241, 0.22);
+    }
+    .chat-place-card.food {
+      background: rgba(250, 140, 22, 0.12);
+      border-color: rgba(250, 140, 22, 0.25);
+    }
+    .chat-place-card.food:hover {
+      background: rgba(250, 140, 22, 0.22);
+    }
+    .chat-route-card {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 8px;
+      padding: 4px 10px;
+      margin: 4px 2px;
+      font-size: 12px;
+      color: #93c5fd;
+    }
+
+    .chat-typing {
+      display: none;
+      align-self: flex-start;
+      padding: 8px 14px;
+    }
+    .chat-typing.active { display: flex; }
+    .chat-typing-dots {
+      display: flex;
+      gap: 4px;
+    }
+    .chat-typing-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(167, 139, 250, 0.5);
+      animation: typingBounce 1.2s ease-in-out infinite;
+    }
+    .chat-typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .chat-typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-6px); }
+    }
+
+    .chat-quick-actions {
+      display: flex;
+      gap: 6px;
+      padding: 8px 16px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .chat-quick-btn {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      color: #c4b5fd;
+      padding: 4px 12px;
+      border-radius: 14px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .chat-quick-btn:hover {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: rgba(99, 102, 241, 0.35);
+    }
+
+    .chat-input-area {
+      display: flex;
+      gap: 8px;
+      padding: 12px 16px;
+      border-top: 1px solid rgba(160, 130, 255, 0.12);
+      flex-shrink: 0;
+    }
+    .chat-input {
+      flex: 1;
+      background: rgba(30, 25, 60, 0.6);
+      border: 1px solid rgba(160, 130, 255, 0.15);
+      border-radius: 12px;
+      padding: 10px 14px;
+      color: #e8e0f0;
+      font-size: 14px;
+      outline: none;
+      resize: none;
+      min-height: 20px;
+      max-height: 80px;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    .chat-input:focus {
+      border-color: rgba(139, 92, 246, 0.4);
+    }
+    .chat-input::placeholder {
+      color: rgba(167, 139, 250, 0.35);
+    }
+    .chat-send-btn {
+      background: linear-gradient(135deg, #7c3aed, #6366f1);
+      border: none;
+      border-radius: 12px;
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #fff;
+      font-size: 18px;
+      flex-shrink: 0;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .chat-send-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+    }
+    .chat-send-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* 聊天面板遮罩 */
+    .chat-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.3);
+      z-index: 940;
+      display: none;
+    }
+    .chat-overlay.active { display: block; }
+
+    @media (max-width: 600px) {
+      .chat-panel {
+        width: 100%;
+        right: -100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       LOGIN SCENE
+       ============================================================ -->
+  <div id="loginScene">
+    <!-- Background layers -->
+    <div class="starfield"></div>
+    <div class="aurora"></div>
+
+    <!-- Sakura petals (generated by JS) -->
+
+    <!-- Login card -->
+    <div class="login-card">
+      <div class="logo-circle">&#x1F30C;</div>
+      <h1 class="brand-title">次元旅人</h1>
+      <p class="brand-subtitle">DIMENSIONAL TRAVELER</p>
+
+      <div class="input-group">
+        <label>旅行者 ID</label>
+        <input type="text" id="userId" placeholder="输入你的旅行者 ID" value="旅人001">
+      </div>
+      <div class="input-group">
+        <label>通行密钥</label>
+        <input type="password" id="userPass" placeholder="输入通行密钥" value="dimension">
+      </div>
+
+      <button class="login-btn" onclick="handleLogin()">&#x2728; 启程探索</button>
+
+      <div class="login-footer">
+        <a href="javascript:void(0)">忘记密码</a>
+        <a href="javascript:void(0)">注册新账号</a>
+      </div>
+    </div>
+
+    <div class="version-badge">次元旅人 v2.0.0</div>
+  </div>
+
+  <!-- ============================================================
+       MAIN APP
+       ============================================================ -->
+  <div id="mainApp">
+    <div class="app-topbar">
+      <span class="topbar-brand">&#x1F30C; 次元旅人</span>
+      <div class="topbar-user">
+        <span id="welcomeUser">旅人001</span>
+        <div class="topbar-avatar">&#x1F9D1;&#x200D;&#x1F680;</div>
+      </div>
+    </div>
+
+    <!-- Welcome & Planner -->
+    <div class="welcome-panel" id="welcomePanel">
+      <h1>&#x2728; 欢迎回来，<span id="welcomeName">旅人</span></h1>
+      <p>告诉次元旅人你想去哪里，AI 将为你规划最优游览路线，生成可交互的次元地图。</p>
+
+      <div class="planner-box" id="plannerBox">
+        <textarea id="tripInput" placeholder="描述你的旅行计划... 例如：我想悠闲地逛西湖2小时，顺便尝尝当地美食"></textarea>
+        <div class="planner-actions">
+          <input type="text" id="cityInput" placeholder="城市（可选）">
+          <button class="planner-go-btn" onclick="startPlanning()">&#x1F5FA; 开始规划</button>
+        </div>
+        <div class="quick-examples">
+          <span class="example-chip" onclick="fillExample(this)">悠闲逛西湖2小时</span>
+          <span class="example-chip" onclick="fillExample(this)">带孩子玩故宫半天</span>
+          <span class="example-chip" onclick="fillExample(this)">快速游览外滩看夜景</span>
+          <span class="example-chip" onclick="fillExample(this)">黄山一日游爬山</span>
+          <span class="example-chip" onclick="fillExample(this)">成都吃一天地道川菜</span>
+          <span class="example-chip" onclick="fillExample(this)">西安边逛边吃小吃</span>
+        </div>
+      </div>
+
+      <!-- Loading overlay inside planner -->
+      <div class="planner-loading" id="plannerLoading">
+        <div class="loading-ring"></div>
+        <div class="loading-text">次元旅人正在规划中...</div>
+        <div class="loading-step" id="loadingStep">正在解析你的旅行意图</div>
+      </div>
+    </div>
+
+    <!-- Map result view (shown after planning) -->
+    <div class="map-result" id="mapResult">
+      <div class="map-result-bar">
+        <div class="result-info" id="resultInfo"></div>
+        <!-- 地图视图模式切换（嵌入地图能力） -->
+        <div class="map-mode-switcher" id="mapModeSwitcher">
+          <button class="map-mode-btn active" onclick="filterMapView('all', this)">全部</button>
+          <button class="map-mode-btn" onclick="filterMapView('scenic', this)">&#x1F3DE;&#xFE0F; 景点</button>
+          <button class="map-mode-btn" onclick="filterMapView('food', this)">&#x1F35C; 美食</button>
+          <button class="map-mode-btn" onclick="filterMapView('mixed', this)">&#x1F6B6;&#x200D;&#x2642;&#xFE0F;&#x1F35C; 逛吃</button>
+        </div>
+        <button class="map-back-btn" onclick="backToPlanner()">&#x2190; 重新规划</button>
+      </div>
+      <div id="mapViewInner"></div>
+    </div>
+  </div>
+
+  <!-- 语音引擎状态徽章 -->
+  <div class="voice-engine-badge" id="voiceEngineBadge"></div>
+
+  <!-- === 小次聊天面板 === -->
+  <button class="chat-toggle-btn" id="chatToggleBtn" onclick="toggleChat()" title="和小次聊天">
+    <span class="unread-dot" id="chatUnreadDot"></span>
+  </button>
+  <div class="chat-overlay" id="chatOverlay" onclick="toggleChat()"></div>
+  <div class="chat-panel" id="chatPanel">
+    <div class="chat-panel-header">
+      <div class="chat-avatar"></div>
+      <div class="chat-header-info">
+        <div class="chat-header-name">小次 · 你的旅行伙伴</div>
+        <div class="chat-header-status">在线 · 次元旅人 AI</div>
+      </div>
+      <button class="chat-voice-toggle active" id="chatVoiceToggle" onclick="toggleChatVoice()" title="语音播报">🔊</button>
+      <button class="chat-close-btn" onclick="toggleChat()">&times;</button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <!-- 小次初始问候 -->
+      <div class="chat-msg assistant">
+        <div class="chat-msg-avatar" title="小次"></div>
+        <div class="chat-msg-content">
+          <div class="chat-msg-bubble" data-raw-text="哇，你好呀！我是小次，你的旅行伙伴哦～ 想吃美食、想去哪里冒险、或者随便聊聊都可以找我！今天想去哪里玩呢？">哇，你好呀！我是小次，你的旅行伙伴哦～ (＾▽＾) 想吃美食、想去哪里冒险、或者随便聊聊都可以找我！今天想去哪里玩呢？</div>
+          <div class="chat-msg-time">小次</div>
+          <button class="chat-msg-voice-btn" onclick="if(this.classList.contains('playing')){stopChatVoice();}else{speakChatReply(this.previousElementSibling.previousElementSibling.getAttribute('data-raw-text'),this);}">🔊 播报</button>
+        </div>
+      </div>
+    </div>
+    <div class="chat-typing" id="chatTyping">
+      <div class="chat-typing-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+    <div class="chat-quick-actions" id="chatQuickActions">
+      <button class="chat-quick-btn" onclick="sendQuickChat('推荐当地美食')">&#x1F35C; 推荐美食</button>
+      <button class="chat-quick-btn" onclick="sendQuickChat('帮我规划行程')">&#x1F5FA;&#xFE0F; 规划行程</button>
+      <button class="chat-quick-btn" onclick="sendQuickChat('附近有什么好玩的')">&#x1F3DE;&#xFE0F; 附近景点</button>
+      <button class="chat-quick-btn" onclick="sendQuickChat('随便聊聊')">&#x1F4AC; 随便聊聊</button>
+    </div>
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="chatInput" placeholder="和小次说点什么..." rows="1" onkeydown="onChatKeyDown(event)"></textarea>
+      <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()">&#x27A4;</button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SCRIPTS
+       ============================================================ -->
+  <script>
+    // --- Sakura petals ---
+    (function createPetals() {
+      const scene = document.getElementById('loginScene');
+      const colors = [
+        'rgba(255, 182, 193, 0.6)',
+        'rgba(255, 160, 200, 0.5)',
+        'rgba(220, 160, 255, 0.5)',
+        'rgba(180, 160, 255, 0.4)',
+        'rgba(255, 200, 220, 0.55)',
+      ];
+      for (let i = 0; i < 25; i++) {
+        const petal = document.createElement('div');
+        petal.className = 'petal';
+        petal.style.left = Math.random() * 100 + '%';
+        petal.style.animationDuration = (6 + Math.random() * 8) + 's';
+        petal.style.animationDelay = (Math.random() * 10) + 's';
+        petal.style.background = colors[Math.floor(Math.random() * colors.length)];
+        petal.style.width = (8 + Math.random() * 8) + 'px';
+        petal.style.height = petal.style.width;
+        scene.appendChild(petal);
+      }
+    })();
+
+    // --- Login handler ---
+    var loginTransitioning = false; // v2: guard against double-fire
+    function handleLogin() {
+      if (loginTransitioning) return;
+      loginTransitioning = true;
+      const userId = document.getElementById('userId').value || '旅人';
+      const scene = document.getElementById('loginScene');
+      const mainApp = document.getElementById('mainApp');
+
+      // Update welcome text
+      document.getElementById('welcomeUser').textContent = userId;
+      document.getElementById('welcomeName').textContent = userId;
+
+      // Transition
+      scene.classList.add('fade-out');
+      setTimeout(() => {
+        scene.style.display = 'none';
+        mainApp.classList.add('visible');
+        document.title = '次元旅人 - 智能旅游规划';
+      }, 800);
+    }
+
+    // Allow Enter key to trigger login
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && document.getElementById('loginScene').style.display !== 'none') {
+        handleLogin();
+      }
+    });
+
+    // --- Fill example ---
+    function fillExample(el) {
+      const text = el.textContent;
+      const map = {
+        '悠闲逛西湖2小时': '我想悠闲地逛西湖2小时，主要想看古建筑和自然风光',
+        '带孩子玩故宫半天': '我带孩子在故宫玩半天，不想去人太多的地方',
+        '快速游览外滩看夜景': '快速游览外滩1.5小时，想看夜景和近代建筑',
+        '黄山一日游爬山': '黄山一日游，体力好喜欢爬山，想看日出和奇松',
+        '成都吃一天地道川菜': '成都一日游，主要想吃地道川菜，看看有没有好吃的小吃',
+        '西安边逛边吃小吃': '西安半日游，想边逛边吃各种当地小吃',
+      };
+      document.getElementById('tripInput').value = map[text] || text;
+    }
+
+    // --- 地图视图过滤（景点/美食/逛吃切换） ---
+    var currentMapView = 'all';  // all | scenic | food | mixed
+
+    function filterMapView(mode, btnEl) {
+      currentMapView = mode;
+      // 更新按钮状态
+      document.querySelectorAll('.map-mode-switcher .map-mode-btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      if (btnEl) btnEl.classList.add('active');
+
+      var mapData = window.__CURRENT_MAP_DATA__;
+      var markers = window.__mapMarkers || [];
+      var pois = (mapData && mapData.pois) || [];
+
+      // 过滤标记点
+      markers.forEach(function(marker, idx) {
+        var poi = pois[idx];
+        if (!poi) return;
+        var cat = poi._category || 'scenic';
+        var isFood = (cat === 'food' || cat === 'drink');
+        var show = false;
+
+        if (mode === 'all') {
+          show = true;
+        } else if (mode === 'scenic') {
+          show = !isFood;
+        } else if (mode === 'food') {
+          show = isFood;
+        } else if (mode === 'mixed') {
+          // 逛吃模式：显示景区+用餐点
+          show = !isFood || poi._is_meal_stop;
+        }
+
+        if (show) {
+          marker.show();
+        } else {
+          marker.hide();
+        }
+      });
+
+      // 过滤侧边栏卡片
+      document.querySelectorAll('.sidebar-poi-card').forEach(function(card) {
+        var idx = parseInt(card.getAttribute('data-index'));
+        var poi = pois[idx];
+        if (!poi) return;
+        var cat = poi._category || 'scenic';
+        var isFood = (cat === 'food' || cat === 'drink');
+        var show = false;
+
+        if (mode === 'all') show = true;
+        else if (mode === 'scenic') show = !isFood;
+        else if (mode === 'food') show = isFood;
+        else if (mode === 'mixed') show = !isFood || poi._is_meal_stop;
+
+        card.style.display = show ? '' : 'none';
+      });
+    }
+
+    // --- Start planning (calls backend pipeline) ---
+    function startPlanning() {
+      const input = document.getElementById('tripInput').value.trim();
+      if (!input) return;
+
+      const city = document.getElementById('cityInput').value.trim();
+      const box = document.getElementById('plannerBox');
+      const loading = document.getElementById('plannerLoading');
+      const stepEl = document.getElementById('loadingStep');
+
+      // Show loading
+      box.style.display = 'none';
+      loading.classList.add('active');
+
+      // Pipeline step simulation
+      const steps = [
+        '正在解析你的旅行意图...',
+        '获取景区与美食 POI 数据...',
+        '智能路线优化中...',
+        '生成语音导览内容...',
+        '生成次元地图...',
+      ];
+      let stepIdx = 0;
+      stepEl.textContent = steps[0];
+      const stepTimer = setInterval(() => {
+        stepIdx++;
+        if (stepIdx < steps.length) {
+          stepEl.textContent = steps[stepIdx];
+        }
+      }, 2000);
+
+      // Call backend API（始终获取全量数据，视图过滤在前端完成）
+      const params = new URLSearchParams({ input });
+      if (city) params.set('city', city);
+
+      fetch('/api/plan?' + params.toString())
+        .then(r => {
+          if (!r.ok) return r.json().then(d => { throw new Error(d.error || '规划失败'); });
+          return r.json();
+        })
+        .then(data => {
+          clearInterval(stepTimer);
+          loading.classList.remove('active');
+
+          if (data.mapData) {
+            // 直接用 API 返回的 JSON 数据动态渲染地图
+            showMapResult(data);
+          } else {
+            box.style.display = '';
+            alert('规划完成但未返回地图数据');
+          }
+        })
+        .catch(err => {
+          clearInterval(stepTimer);
+          loading.classList.remove('active');
+          box.style.display = '';
+          alert('规划失败: ' + (err.message || '请检查服务器是否启动'));
+        });
+    }
+
+    // --- Show map result ---
+    function showMapResult(data) {
+      const welcomePanel = document.getElementById('welcomePanel');
+      const mapResult = document.getElementById('mapResult');
+      const resultInfo = document.getElementById('resultInfo');
+
+      // Build result info bar
+      const totalMin = (data.mapData && data.mapData.total_duration_min) || 0;
+      const walkMin = (data.mapData && data.mapData.total_walking_min) || 0;
+      const durStr = totalMin >= 60
+        ? Math.floor(totalMin / 60) + 'h' + (totalMin % 60 > 0 ? totalMin % 60 + 'm' : '')
+        : totalMin + 'min';
+
+      resultInfo.innerHTML =
+        '<span>\u{1F4CD} ' + (data.scenic_name || '景区') + (data.city ? ' \u00B7 ' + data.city : '') + '</span>' +
+        '<span>\u{1F3DB} ' + (data.poi_count || data.scenic_count || '?') + ' 个景点</span>' +
+        (data.food_count ? '<span>\u{1F35C} ' + data.food_count + ' 家美食</span>' : '') +
+        '<span>\u23F1 ' + (data.total_duration || durStr) + '</span>' +
+        '<span>\u{1F6B6} ' + (data.walking_time || walkMin + 'min') + '</span>';
+
+      // Switch views
+      welcomePanel.classList.add('hidden');
+      mapResult.classList.add('visible');
+
+      // Dynamically load AMap and render
+      loadAMapAndRender(data.mapData, data.amapKey, data.amapSecurityCode);
+
+      // Check TTS engine availability
+      if (!voiceState.checked) checkTTSEngine();
+    }
+
+    // --- Dynamic AMap loader ---
+    function loadAMapAndRender(mapData, amapKey, securityCode) {
+      var container = document.getElementById('mapViewInner');
+      container.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;height:100%;">' +
+          '<div class="loading-ring"></div>' +
+          '<span style="margin-left:12px;color:rgba(196,181,253,0.5);">正在加载高德地图...</span>' +
+        '</div>';
+
+      // Store data globally for rendering functions
+      window.__CURRENT_MAP_DATA__ = mapData;
+
+      // If AMap is already loaded, just re-render
+      if (window.AMap) {
+        doRenderMap();
+        return;
+      }
+
+      // Set security config before loading AMap script
+      window._AMapSecurityConfig = { securityJsCode: securityCode || '' };
+
+      // Dynamically load AMap JSAPI v2.0
+      var script = document.createElement('script');
+      script.src = 'https://webapi.amap.com/maps?v=2.0&key=' + amapKey + '&plugin=AMap.Walking,AMap.Geolocation';
+      script.onload = function() { doRenderMap(); };
+      script.onerror = function() {
+        container.innerHTML =
+          '<div class="map-error">' +
+            '<span class="error-icon">\u26A0\uFE0F</span>' +
+            '<span>高德地图加载失败，请检查网络和 API Key</span>' +
+          '</div>';
+      };
+      document.head.appendChild(script);
+    }
+
+    // --- Render map with AMap ---
+    function doRenderMap() {
+      var AMap = window.AMap;
+      var mapData = window.__CURRENT_MAP_DATA__;
+      var container = document.getElementById('mapViewInner');
+      container.innerHTML = '';
+
+      if (!AMap) {
+        container.innerHTML = '<div class="map-error"><span>高德地图 SDK 未加载</span></div>';
+        return;
+      }
+
+      // Create map instance
+      var map = new AMap.Map('mapViewInner', {
+        zoom: 14,
+        viewMode: '2D',
+        mapStyle: 'amap://styles/whitesmoke',
+        resizeEnable: true,
+        touchZoom: true,
+        scrollWheel: true
+      });
+      window.__mapInstance = map;
+
+      // Info window
+      var infoWindow = new AMap.InfoWindow({
+        offset: new AMap.Pixel(0, -40),
+        closeWhenClickMap: true,
+        isCustom: false
+      });
+
+      var markers = [];
+      var pois = mapData.pois || [];
+      var segments = mapData.segments || [];
+
+      // Render markers
+      pois.forEach(function(poi, idx) {
+        var markerEl = document.createElement('div');
+        markerEl.className = 'custom-marker';
+        markerEl.style.animationDelay = (idx * 0.1) + 's';
+
+        var category = poi._category || 'scenic';
+        var isMeal = poi._is_meal_stop;
+        var isFoodType = (category === 'food' || category === 'drink');
+
+        if (isFoodType) {
+          var icon = isMeal ? '\u{1F37D}\uFE0F' : '\u{1F35C}';
+          markerEl.innerHTML = '<div class="marker-food">' + icon + '</div>';
+        } else {
+          markerEl.innerHTML =
+            '<div class="marker-pin"><span class="marker-number">' + (idx + 1) + '</span></div>';
+        }
+
+        var marker = new AMap.Marker({
+          position: new AMap.LngLat(poi.lng, poi.lat),
+          content: markerEl,
+          offset: isFoodType ? new AMap.Pixel(-20, -28) : new AMap.Pixel(-18, -36),
+          extData: poi
+        });
+
+        marker.on('click', function(e) {
+          var d = e.target.getExtData();
+          var cat = d._category || 'scenic';
+          var isFood = (cat === 'food' || cat === 'drink');
+          var tagsHtml = (d.tags || []).map(function(t) {
+            return '<span class="poi-popup-tag">' + escapeHTML(t) + '</span>';
+          }).join('');
+          var durText = d.duration_min >= 60
+            ? Math.floor(d.duration_min / 60) + '小时' + (d.duration_min % 60 > 0 ? d.duration_min % 60 + '分钟' : '')
+            : d.duration_min + '分钟';
+          // Photo thumbnail (v2: XSS-safe)
+          var photoHtml = '';
+          if (d.photos && d.photos.length > 0) {
+            photoHtml = '<img class="poi-popup-photo" src="' + escapeAttr(d.photos[0]) + '" alt="' + escapeAttr(d.name) + '" onerror="this.style.display=\'none\'">';
+          }
+          // Rating
+          var ratingHtml = '';
+          if (d.rating && d.rating > 0) {
+            ratingHtml = '<div class="poi-popup-rating">\u2B50 ' + d.rating.toFixed(1) + '</div>';
+          }
+          // Business hours (v2: XSS-safe)
+          var hoursHtml = '';
+          if (d.business_hours) {
+            hoursHtml = '<div class="poi-popup-hours">\u{1F552} ' + escapeHTML(d.business_hours) + '</div>';
+          }
+          // Phone (v2: XSS-safe)
+          var phoneHtml = '';
+          if (d._tel) {
+            phoneHtml = '<div class="poi-popup-row">\u260E ' + escapeHTML(d._tel) + '</div>';
+          }
+          // Food-specific info (v2: XSS-safe)
+          var foodInfoHtml = '';
+          if (isFood) {
+            if (d._cuisine_type) foodInfoHtml += '<div class="poi-popup-row">\u{1F373} ' + escapeHTML(d._cuisine_type) + '</div>';
+            if (d._avg_cost) foodInfoHtml += '<div class="poi-popup-row">\u{1F4B0} 人均 ' + escapeHTML(String(d._avg_cost)) + ' 元</div>';
+            if (d._is_meal_stop) {
+              var ml = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐', snack: '下午茶' };
+              foodInfoHtml += '<div class="poi-popup-row">\u{1F37D}\uFE0F 推荐：' + (ml[d._meal_time] || '用餐') + '</div>';
+            }
+          }
+          // Navigation button (v2: rel=noopener)
+          var navClass = isFood ? 'nav-btn-sidebar food-nav' : 'nav-btn-sidebar';
+          var navUrl = 'https://uri.amap.com/navigation?to=' + d.lng + ',' + d.lat + ',' +
+            encodeURIComponent(d.name) + '&mode=walk&src=ciyuanlvren';
+          var navBtn = '<a class="' + navClass + '" href="' + navUrl + '" target="_blank" rel="noopener noreferrer">\u{1F9ED} 导航前往</a>';
+
+          var titleIcon = isFood ? '\u{1F35C} ' : '';
+          var durLabel = isFood ? '用餐约 ' : '建议游览: ';
+
+          infoWindow.setContent(
+            '<div class="poi-popup">' +
+              photoHtml +
+              '<div class="poi-popup-title">' + titleIcon + escapeHTML(d.name) + '</div>' +
+              ratingHtml +
+              '<div class="poi-popup-row">\u{1F4CD} ' + escapeHTML(d.address || '暂无地址信息') + '</div>' +
+              '<div class="poi-popup-row">\u23F1 ' + durLabel + durText + '</div>' +
+              foodInfoHtml + hoursHtml + phoneHtml +
+              (tagsHtml ? '<div class="poi-popup-tags">' + tagsHtml + '</div>' : '') +
+              navBtn +
+              '<div style="margin-top:10px;">' +
+                '<button class="voice-btn" onclick="speakPOI(' + idx + ', this)">' +
+                  '\u{1F50A} 播放介绍</button>' +
+              '</div>' +
+            '</div>'
+          );
+          infoWindow.open(map, e.target.getPosition());
+          highlightCard(idx);
+        });
+
+        marker.setMap(map);
+        markers.push(marker);
+      });
+
+      // Render route polylines (v2: store references for cleanup)
+      var polylines = [];
+      segments.forEach(function(seg) {
+        var path = (seg.coords || []).map(function(c) {
+          return new AMap.LngLat(c[0], c[1]);
+        });
+        if (path.length < 2) {
+          var fromPoi = pois[seg.from_index];
+          var toPoi = pois[seg.to_index];
+          if (fromPoi && toPoi) {
+            path.push(
+              new AMap.LngLat(fromPoi.lng, fromPoi.lat),
+              new AMap.LngLat(toPoi.lng, toPoi.lat)
+            );
+          }
+        }
+        if (path.length >= 2) {
+          var isMealSeg = seg._is_meal_segment;
+          var polyline = new AMap.Polyline({
+            path: path,
+            strokeColor: isMealSeg ? '#fa8c16' : '#1677ff',
+            strokeWeight: isMealSeg ? 4 : 5,
+            strokeOpacity: 0.75,
+            strokeStyle: isMealSeg ? 'dashed' : 'solid',
+            strokeDash: isMealSeg ? [10, 6] : undefined,
+            lineJoin: 'round',
+            lineCap: 'round',
+            showDir: true
+          });
+          polyline.setMap(map);
+          polylines.push(polyline);
+        }
+      });
+
+      // Auto fit view
+      if (markers.length > 0) {
+        map.setFitView(markers, false, [80, 80, 80, 420]);
+      }
+
+      // Render sidebar itinerary
+      renderMapSidebar(mapData, map, markers, infoWindow);
+
+      // Store references for cleanup
+      window.__mapMarkers = markers;
+      window.__mapPolylines = polylines;
+      window.__mapInfoWindow = infoWindow;
+    }
+
+    // --- Render sidebar for map view ---
+    function renderMapSidebar(mapData, map, markers, infoWindow) {
+      var pois = mapData.pois || [];
+      var segments = mapData.segments || [];
+      var totalDuration = mapData.total_duration_min || 0;
+      var totalWalking = mapData.total_walking_min || 0;
+      var scenicCount = mapData.scenic_count || 0;
+      var foodCount = mapData.food_count || 0;
+
+      var durText = totalDuration >= 60
+        ? Math.floor(totalDuration / 60) + '小时' + (totalDuration % 60 > 0 ? totalDuration % 60 + '分钟' : '')
+        : totalDuration + '分钟';
+
+      // Update header title (v2: XSS-safe)
+      document.querySelector('.topbar-brand').innerHTML =
+        '\u{1F30C} ' + escapeHTML(mapData.scenic_name || '次元旅人') + ' - 行程';
+
+      // Build sidebar content inside map-result bar area
+      var sidebarContainer = document.getElementById('mapViewInner');
+
+      // Create sidebar overlay
+      var sidebar = document.createElement('div');
+      sidebar.style.cssText =
+        'position:absolute;right:0;top:0;bottom:0;width:360px;background:rgba(255,255,255,0.97);' +
+        'overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.08);z-index:100;padding:16px;' +
+        'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;';
+
+      var mealLabels = { breakfast: '\u{1F373} 早餐', lunch: '\u{1F35C} 午餐', dinner: '\u{1F319} 晚餐', snack: '\u{1F375} 下午茶' };
+
+      var html = '<div style="font-size:17px;font-weight:600;margin-bottom:12px;color:#1f1f1f;">' +
+        '\u{1F4CB} 游览行程</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">' +
+          '<span style="font-size:12px;padding:4px 10px;border-radius:12px;background:#e6f4ff;color:#1677ff;">' +
+            '\u23F1 总计 ' + durText + '</span>' +
+          '<span style="font-size:12px;padding:4px 10px;border-radius:12px;background:#f6ffed;color:#52c41a;">' +
+            '\u{1F6B6} 步行 ' + totalWalking + '分钟</span>';
+      if (scenicCount > 0) {
+        html += '<span style="font-size:12px;padding:4px 10px;border-radius:12px;background:#e6f4ff;color:#1677ff;">' +
+            '\u{1F3DE}\uFE0F ' + scenicCount + '个景点</span>';
+      }
+      if (foodCount > 0) {
+        html += '<span style="font-size:12px;padding:4px 10px;border-radius:12px;background:#fff7e6;color:#fa8c16;">' +
+            '\u{1F35C} ' + foodCount + '家美食</span>';
+      }
+      html += '</div>';
+
+      // City food summary (v2: XSS-safe)
+      if (mapData.food_summary) {
+        html += '<div style="padding:12px;margin-bottom:16px;background:linear-gradient(135deg,#fff7e6,#fff1e0);border-radius:12px;border:1px solid rgba(250,140,22,0.2);">' +
+          '<div style="font-size:13px;font-weight:600;color:#d46b08;margin-bottom:6px;">\u{1F35C} 美食导览</div>' +
+          '<div style="font-size:12px;color:#666;line-height:1.6;">' + escapeHTML(mapData.food_summary) + '</div>' +
+        '</div>';
+      }
+
+      var scenicIdx = 0;
+      pois.forEach(function(poi, idx) {
+        var category = poi._category || 'scenic';
+        var isFood = (category === 'food' || category === 'drink');
+
+        var durStr = poi.duration_min >= 60
+          ? Math.floor(poi.duration_min / 60) + 'h' + (poi.duration_min % 60 > 0 ? poi.duration_min % 60 + 'm' : '')
+          : poi.duration_min + '分钟';
+
+        var tagsHtml = (poi.tags || []).map(function(t) {
+          return '<span style="font-size:11px;color:#666;background:#f5f5f5;padding:2px 8px;border-radius:8px;">' + escapeHTML(t) + '</span>';
+        }).join('');
+
+        // Photo thumbnail for sidebar (v2: XSS-safe)
+        var photoHtml = '';
+        if (poi.photos && poi.photos.length > 0) {
+          photoHtml = '<img class="sidebar-poi-photo" src="' + escapeAttr(poi.photos[0]) + '" alt="' + escapeAttr(poi.name) + '" onerror="this.style.display=\'none\'">';
+        }
+        // Rating badge
+        var ratingHtml = '';
+        if (poi.rating && poi.rating > 0) {
+          ratingHtml = '<span class="sidebar-rating-badge">\u2B50 ' + poi.rating.toFixed(1) + '</span>';
+        }
+
+        if (isFood) {
+          // ── Food card (orange theme) ──
+          var indexIcon = poi._is_meal_stop ? '\u{1F35C}' : '\u{1F374}';
+          var borderColor = poi._is_meal_stop ? '#fa8c16' : '#f0f0f0';
+          var bgColor = poi._is_meal_stop ? '#fffbe6' : 'transparent';
+
+          // Meal separator before this card
+          if (poi._is_meal_stop && poi._meal_time) {
+            html += '<div class="meal-separator">' +
+              '<div class="meal-line"></div>' +
+              '<span class="meal-label">' + (mealLabels[poi._meal_time] || '\u{1F35C} 用餐') + '</span>' +
+              '<div class="meal-line"></div>' +
+            '</div>';
+          }
+
+          var cuisineHtml = '';
+          if (poi._cuisine_type) {
+            cuisineHtml = '<span class="cuisine-tag">' + escapeHTML(poi._cuisine_type) + '</span>';
+          }
+          var costHtml = '';
+          if (poi._avg_cost) {
+            costHtml = '<span class="cost-tag">\u{1F4B0} ' + escapeHTML(String(poi._avg_cost)) + '元/人</span>';
+          }
+
+          // Navigation button
+          var navUrl = 'https://uri.amap.com/navigation?to=' + poi.lng + ',' + poi.lat + ',' +
+            encodeURIComponent(poi.name) + '&mode=walk&src=ciyuanlvren';
+
+          html += '<div class="sidebar-poi-card" data-index="' + idx + '" style="' +
+            'border:1px solid ' + borderColor + ';border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer;' +
+            'transition:all 0.2s;position:relative;background:' + bgColor + ';" onclick="onSidebarCardClick(' + idx + ')">' +
+            (poi._is_meal_stop ? '<div class="food-card-indicator"></div>' : '') +
+            '<div style="display:flex;gap:10px;">' +
+              photoHtml +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="display:flex;align-items:center;gap:8px;">' +
+                  '<div style="width:28px;height:28px;min-width:28px;background:linear-gradient(135deg,#fa8c16,#d46b08);' +
+                    'color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
+                    'font-size:14px;">' + indexIcon + '</div>' +
+                  '<div style="font-size:15px;font-weight:600;color:#1f1f1f;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(poi.name) + '</div>' +
+                  ratingHtml +
+                '</div>' +
+                '<div style="font-size:12px;color:#999;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+                  escapeHTML(poi.address || '') + '</div>' +
+                '<div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">' +
+                  '<span style="font-size:12px;color:#fa8c16;background:#fff7e6;padding:2px 8px;border-radius:10px;">' +
+                    '\u23F1 ' + durStr + '</span>' +
+                  cuisineHtml + costHtml +
+                  '<div style="display:flex;gap:4px;flex-wrap:wrap;">' + tagsHtml + '</div>' +
+                '</div>' +
+                '<div style="display:flex;gap:6px;margin-top:8px;">' +
+                  '<button class="voice-btn voice-btn-sidebar" onclick="event.stopPropagation();speakPOI(' + idx + ', this)">' +
+                    '\u{1F50A} 介绍</button>' +
+                  '<a class="' + (poi._is_meal_stop ? 'nav-btn-sidebar food-nav' : 'nav-btn-sidebar') + '" href="' + navUrl + '" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">' +
+                    '\u{1F9ED} 导航</a>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        } else {
+          // ── Scenic card (blue theme) ──
+          scenicIdx++;
+
+          // Navigation button
+          var navUrl = 'https://uri.amap.com/navigation?to=' + poi.lng + ',' + poi.lat + ',' +
+            encodeURIComponent(poi.name) + '&mode=walk&src=ciyuanlvren';
+
+          html += '<div class="sidebar-poi-card" data-index="' + idx + '" style="' +
+            'border:1px solid #f0f0f0;border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer;' +
+            'transition:all 0.2s;" onclick="onSidebarCardClick(' + idx + ')">' +
+            '<div style="display:flex;gap:10px;">' +
+              photoHtml +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="display:flex;align-items:center;gap:8px;">' +
+                  '<div style="width:28px;height:28px;min-width:28px;background:linear-gradient(135deg,#1677ff,#0958d9);' +
+                    'color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
+                    'font-size:13px;font-weight:700;">' + scenicIdx + '</div>' +
+                  '<div style="font-size:15px;font-weight:600;color:#1f1f1f;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHTML(poi.name) + '</div>' +
+                  ratingHtml +
+                '</div>' +
+                '<div style="font-size:12px;color:#999;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+                  escapeHTML(poi.address || '') + '</div>' +
+                '<div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;">' +
+                  '<span style="font-size:12px;color:#1677ff;background:#e6f4ff;padding:2px 8px;border-radius:10px;">' +
+                    '\u23F1 ' + durStr + '</span>' +
+                  '<div style="display:flex;gap:4px;flex-wrap:wrap;">' + tagsHtml + '</div>' +
+                '</div>' +
+                '<div style="display:flex;gap:6px;margin-top:8px;">' +
+                  '<button class="voice-btn voice-btn-sidebar" onclick="event.stopPropagation();speakPOI(' + idx + ', this)">' +
+                    '\u{1F50A} 介绍</button>' +
+                  '<a class="nav-btn-sidebar" href="' + navUrl + '" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();">' +
+                    '\u{1F9ED} 导航</a>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        }
+
+        // Walking segment
+        var seg = segments.find(function(s) { return s.from_index === idx; });
+        if (seg && idx < pois.length - 1) {
+          var isMealSeg = seg._is_meal_segment;
+          var segColor = isMealSeg ? '#fa8c16' : '#d9d9d9';
+          var segTextColor = isMealSeg ? '#fa8c16' : '#52c41a';
+          html += '<div style="display:flex;align-items:center;justify-content:center;padding:4px 0;' +
+            'color:#999;font-size:12px;gap:8px;">' +
+            '<div style="width:1px;height:16px;background:' + segColor + ';"></div>' +
+            '<div style="width:4px;height:4px;border-radius:50%;background:' + segColor + ';"></div>' +
+            '<span style="color:' + segTextColor + ';font-weight:500;">\u{1F6B6} 步行 ' + seg.walking_min + ' 分钟</span>' +
+            '<div style="width:4px;height:4px;border-radius:50%;background:' + segColor + ';"></div>' +
+            '<div style="width:1px;height:16px;background:' + segColor + ';"></div>' +
+          '</div>';
+        }
+      });
+
+      // Play all narrations button
+      if (mapData.narrations && mapData.narrations.length > 0) {
+        html += '<div style="padding:16px 0;text-align:center;">' +
+          '<button class="voice-btn" onclick="playAllNarrations(this)" style="padding:8px 24px;font-size:13px;">' +
+            '\u{1F3A7} 播放全程语音导览</button>' +
+        '</div>';
+      }
+
+      sidebar.innerHTML = html;
+      sidebarContainer.appendChild(sidebar);
+
+      // Adjust map padding to account for sidebar
+      if (map) {
+        map.setFitView(window.__mapMarkers || [], false, [80, 80, 80, 400]);
+      }
+    }
+
+    // --- Highlight sidebar card ---
+    function highlightCard(index) {
+      document.querySelectorAll('.sidebar-poi-card').forEach(function(c) {
+        c.style.borderColor = '#f0f0f0';
+        c.style.background = 'transparent';
+      });
+      var target = document.querySelector('.sidebar-poi-card[data-index="' + index + '"]');
+      if (target) {
+        // 判断是否为美食卡片
+        var mapData = window.__CURRENT_MAP_DATA__;
+        var poi = mapData && mapData.pois && mapData.pois[index];
+        var isFood = poi && (poi._category === 'food' || poi._category === 'drink');
+        target.style.borderColor = isFood ? '#fa8c16' : '#1677ff';
+        target.style.background = isFood ? '#fff7e6' : '#e6f4ff';
+        target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+
+    // ============================================================
+    // 语音播报模块 (Voice Playback Module)
+    // 双引擎：后端 LongCat-AudioDiT (优先) → 浏览器 Web Speech API (回退)
+    // ============================================================
+    var voiceState = {
+      engine: null,        // 'audiodit' | 'webspeech' | null
+      checked: false,
+      speaking: false,
+      currentBtn: null,
+      audioEl: null,
+      utterance: null,
+    };
+
+    // 检测后端 TTS 服务可用性
+    function checkTTSEngine() {
+      fetch('/api/tts/status')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.available) {
+            var eng = (data.engine || '').toLowerCase();
+            voiceState.engine = eng.indexOf('edge') >= 0 ? 'edge'
+              : eng.indexOf('longcat') >= 0 || eng.indexOf('audiodit') >= 0 ? 'audiodit'
+              : 'backend';
+          } else {
+            voiceState.engine = 'webspeech';
+          }
+          voiceState.checked = true;
+          var badge = document.getElementById('voiceEngineBadge');
+          if (badge) {
+            var displayName = data.available ? (data.engine || 'Backend TTS') : 'Web Speech';
+            badge.textContent = '\u{1F50A} ' + displayName;
+            badge.classList.add('visible');
+          }
+        })
+        .catch(function() {
+          voiceState.engine = 'webspeech';
+          voiceState.checked = true;
+          var badge = document.getElementById('voiceEngineBadge');
+          if (badge) {
+            badge.textContent = '\u{1F50A} Web Speech';
+            badge.classList.add('visible');
+          }
+        });
+    }
+
+    // 停止当前播放
+    function stopVoice() {
+      if (voiceState.audioEl) {
+        voiceState.audioEl.pause();
+        voiceState.audioEl = null;
+      }
+      if (voiceState.utterance) {
+        speechSynthesis.cancel();
+        voiceState.utterance = null;
+      }
+      if (voiceState.currentBtn) {
+        voiceState.currentBtn.classList.remove('playing');
+        voiceState.currentBtn.innerHTML = '\u{1F50A} \u64AD\u653E\u4ECB\u7ECD';
+        voiceState.currentBtn = null;
+      }
+      voiceState.speaking = false;
+      narrationQueue = [];
+      narrationIdx = 0;
+    }
+
+    // 播放景点介绍语音
+    function speakPOI(index, btnEl) {
+      // 如果正在播放同一个，则停止
+      if (voiceState.speaking && voiceState.currentBtn === btnEl) {
+        stopVoice();
+        return;
+      }
+      // 停止其他播放
+      stopVoice();
+
+      var mapData = window.__CURRENT_MAP_DATA__;
+      var poi = mapData && mapData.pois && mapData.pois[index];
+      if (!poi) return;
+
+      var text = poi.name + '\u3002' + (poi.description || '\u6682\u65E0\u8BE6\u7EC6\u4ECB\u7ECD');
+      voiceState.speaking = true;
+      voiceState.currentBtn = btnEl;
+      btnEl.classList.add('playing');
+      btnEl.innerHTML = '\u{1F50A} \u64AD\u653E\u4E2D...';
+
+      // 尝试后端 TTS
+      if (voiceState.engine === 'audiodit') {
+        fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text, voice: 'default', speed: 0.95 })
+        })
+        .then(function(r) {
+          var ct = r.headers.get('content-type') || '';
+          if (ct.indexOf('audio') >= 0) {
+            return r.blob().then(function(blob) {
+              var blobUrl = URL.createObjectURL(blob);
+              var audio = new Audio(blobUrl);
+              voiceState.audioEl = audio;
+              audio.onended = function() { URL.revokeObjectURL(blobUrl); onVoiceEnd(); };
+              audio.onerror = function() {
+                URL.revokeObjectURL(blobUrl);
+                stopVoice();
+                speakWithWebSpeech(text);  // 回退
+              };
+              audio.play();
+            });
+          }
+          // 返回 JSON，回退到 Web Speech
+          return r.json().then(function() { speakWithWebSpeech(text); });
+        })
+        .catch(function() { speakWithWebSpeech(text); });
+      } else {
+        speakWithWebSpeech(text);
+      }
+    }
+
+    // Web Speech API 回退
+    function speakWithWebSpeech(text) {
+      if (!('speechSynthesis' in window)) {
+        onVoiceEnd();
+        return;
+      }
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN';
+      u.rate = 0.9;
+      u.pitch = 1.0;
+      u.onend = function() { onVoiceEnd(); };
+      u.onerror = function() { onVoiceEnd(); };
+      voiceState.utterance = u;
+      speechSynthesis.speak(u);
+    }
+
+    // 播放结束回调
+    function onVoiceEnd() {
+      voiceState.speaking = false;
+      voiceState.audioEl = null;
+      voiceState.utterance = null;
+      if (voiceState.currentBtn) {
+        voiceState.currentBtn.classList.remove('playing');
+        voiceState.currentBtn.innerHTML = '\u{1F50A} \u64AD\u653E\u4ECB\u7ECD';
+        voiceState.currentBtn = null;
+      }
+    }
+
+    // ============================================================
+    // 语音增强：全程导览、城市欢迎、过渡解说
+    // ============================================================
+
+    // 播放全程语音导览（按顺序播放所有 narration）
+    var narrationQueue = [];
+    var narrationIdx = 0;
+    function playAllNarrations(btnEl) {
+      var mapData = window.__CURRENT_MAP_DATA__;
+      if (!mapData || !mapData.narrations || mapData.narrations.length === 0) {
+        alert('暂无语音导览内容');
+        return;
+      }
+      // 如果正在播放，停止
+      if (narrationQueue.length > 0) {
+        stopVoice();
+        narrationQueue = [];
+        narrationIdx = 0;
+        if (btnEl) btnEl.innerHTML = '\u{1F3A7} 播放全程语音导览';
+        return;
+      }
+
+      // 构建播放队列：城市欢迎 → 各段过渡 → 各POI介绍
+      narrationQueue = [];
+      if (mapData.city_welcome) {
+        narrationQueue.push({ text: mapData.city_welcome, label: '\u{1F3D9}\uFE0F 城市欢迎' });
+      }
+      mapData.narrations.forEach(function(n, i) {
+        narrationQueue.push({ text: n.text, label: '\u{1F6B6} 第' + (i + 1) + '段导览' });
+      });
+      narrationIdx = 0;
+
+      if (btnEl) {
+        btnEl.classList.add('playing');
+        btnEl.innerHTML = '\u{1F3A7} 播放中... (点击停止)';
+        voiceState.currentBtn = btnEl;
+      }
+      playNextNarration();
+    }
+
+    function playNextNarration() {
+      if (narrationIdx >= narrationQueue.length) {
+        // 播放完毕
+        narrationQueue = [];
+        narrationIdx = 0;
+        onVoiceEnd();
+        return;
+      }
+      var item = narrationQueue[narrationIdx];
+      narrationIdx++;
+      voiceState.speaking = true;
+
+      if (voiceState.engine === 'audiodit') {
+        fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: item.text, voice: 'default', speed: 0.95 })
+        })
+        .then(function(r) {
+          var ct = r.headers.get('content-type') || '';
+          if (ct.indexOf('audio') >= 0) {
+            return r.blob().then(function(blob) {
+              var blobUrl = URL.createObjectURL(blob);
+              var audio = new Audio(blobUrl);
+              voiceState.audioEl = audio;
+              audio.onended = function() { URL.revokeObjectURL(blobUrl); playNextNarration(); };
+              audio.onerror = function() { URL.revokeObjectURL(blobUrl); speakWithWebSpeech(item.text); };
+              audio.play();
+            });
+          }
+          return r.json().then(function() { speakWithWebSpeechQueue(item.text); });
+        })
+        .catch(function() { speakWithWebSpeechQueue(item.text); });
+      } else {
+        speakWithWebSpeechQueue(item.text);
+      }
+    }
+
+    function speakWithWebSpeechQueue(text) {
+      if (!('speechSynthesis' in window)) {
+        playNextNarration();
+        return;
+      }
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN'; u.rate = 0.9; u.pitch = 1.0;
+      u.onend = function() { playNextNarration(); };
+      u.onerror = function() { playNextNarration(); };
+      voiceState.utterance = u;
+      speechSynthesis.speak(u);
+    }
+
+    // 播放城市欢迎语音
+    function playCityWelcome(btnEl) {
+      var mapData = window.__CURRENT_MAP_DATA__;
+      if (!mapData || !mapData.city_welcome) return;
+      if (voiceState.speaking && voiceState.currentBtn === btnEl) {
+        stopVoice(); return;
+      }
+      stopVoice();
+      voiceState.currentBtn = btnEl;
+      btnEl.classList.add('playing');
+      btnEl.innerHTML = '\u{1F50A} 播放中...';
+      voiceState.speaking = true;
+
+      if (voiceState.engine === 'audiodit') {
+        fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: mapData.city_welcome, voice: 'default', speed: 0.9 })
+        })
+        .then(function(r) {
+          var ct = r.headers.get('content-type') || '';
+          if (ct.indexOf('audio') >= 0) {
+            return r.blob().then(function(blob) {
+              var blobUrl = URL.createObjectURL(blob);
+              var audio = new Audio(blobUrl);
+              voiceState.audioEl = audio;
+              audio.onended = function() { URL.revokeObjectURL(blobUrl); onVoiceEnd(); };
+              audio.onerror = function() { URL.revokeObjectURL(blobUrl); speakWithWebSpeech(mapData.city_welcome); };
+              audio.play();
+            });
+          }
+          return r.json().then(function() { speakWithWebSpeech(mapData.city_welcome); });
+        })
+        .catch(function() { speakWithWebSpeech(mapData.city_welcome); });
+      } else {
+        speakWithWebSpeech(mapData.city_welcome);
+      }
+    }
+
+    // --- Sidebar card click handler ---
+    function onSidebarCardClick(index) {
+      var mapData = window.__CURRENT_MAP_DATA__;
+      var poi = mapData && mapData.pois && mapData.pois[index];
+      var map = window.__mapInstance;
+      var markers = window.__mapMarkers;
+      var infoWindow = window.__mapInfoWindow;
+      if (!poi || !map) return;
+
+      // Highlight card
+      document.querySelectorAll('.sidebar-poi-card').forEach(function(c) {
+        c.style.borderColor = '#f0f0f0';
+        c.style.background = 'transparent';
+      });
+      var target = document.querySelector('.sidebar-poi-card[data-index="' + index + '"]');
+      if (target) {
+        target.style.borderColor = '#1677ff';
+        target.style.background = '#e6f4ff';
+      }
+
+      // Center map on POI
+      map.setZoomAndCenter(16, [poi.lng, poi.lat], false, 500);
+
+      // Open info window
+      if (markers && markers[index] && infoWindow) {
+        var d = poi;
+        var tagsHtml = (d.tags || []).map(function(t) {
+          return '<span class="poi-popup-tag">' + t + '</span>';
+        }).join('');
+        var durText = d.duration_min >= 60
+          ? Math.floor(d.duration_min / 60) + '小时' + (d.duration_min % 60 > 0 ? d.duration_min % 60 + '分钟' : '')
+          : d.duration_min + '分钟';
+        var photoHtml = '';
+        if (d.photos && d.photos.length > 0) {
+          photoHtml = '<img class="poi-popup-photo" src="' + d.photos[0] + '" alt="' + d.name + '" onerror="this.style.display=\'none\'">';
+        }
+        var ratingHtml = '';
+        if (d.rating && d.rating > 0) {
+          ratingHtml = '<div class="poi-popup-rating">\u2B50 ' + d.rating.toFixed(1) + '</div>';
+        }
+        var hoursHtml = '';
+        if (d.business_hours) {
+          hoursHtml = '<div class="poi-popup-hours">\u{1F552} ' + d.business_hours + '</div>';
+        }
+        infoWindow.setContent(
+          '<div class="poi-popup">' +
+            photoHtml +
+            '<div class="poi-popup-title">' + d.name + '</div>' +
+            ratingHtml +
+            '<div class="poi-popup-row">\u{1F4CD} ' + (d.address || '暂无地址信息') + '</div>' +
+            '<div class="poi-popup-row">\u23F1 建议游览: ' + durText + '</div>' +
+            hoursHtml +
+            (tagsHtml ? '<div class="poi-popup-tags">' + tagsHtml + '</div>' : '') +
+          '</div>'
+        );
+        infoWindow.open(map, markers[index].getPosition());
+      }
+    }
+
+    // --- Back to planner ---
+    function backToPlanner() {
+      var welcomePanel = document.getElementById('welcomePanel');
+      var mapResult = document.getElementById('mapResult');
+      var box = document.getElementById('plannerBox');
+
+      // Cleanup map
+      if (window.__mapInstance) {
+        window.__mapInstance.destroy();
+        window.__mapInstance = null;
+      }
+      window.__CURRENT_MAP_DATA__ = null;
+      window.__mapMarkers = null;
+      window.__mapInfoWindow = null;
+
+      // Cleanup voice
+      stopVoice();
+
+      var mapContainer = document.getElementById('mapViewInner');
+      if (mapContainer) mapContainer.innerHTML = '';
+
+      mapResult.classList.remove('visible');
+      welcomePanel.classList.remove('hidden');
+      box.style.display = '';
+
+      // Reset header
+      document.querySelector('.topbar-brand').innerHTML = '\u{1F30C} 次元旅人';
+    }
+
+
+    // ============================================================
+    // 小次聊天面板 - JavaScript
+    // ============================================================
+
+    // 会话状态
+    var chatSessionId = null;
+    var chatIsOpen = false;
+    var chatSending = false;
+    var chatVoiceEnabled = true;   // 语音播报开关（默认开启）
+    var chatAudioEl = null;        // 当前播放的 Audio 元素
+
+    /**
+     * 初始化聊天会话ID（在登录成功后调用）
+     */
+    function initChatSession() {
+      var userName = document.getElementById('userId')?.value || '旅人';
+      chatSessionId = userName + '_' + Date.now().toString(36);
+
+      // 显示聊天按钮
+      var btn = document.getElementById('chatToggleBtn');
+      if (btn) btn.classList.add('visible');
+    }
+
+    /**
+     * 展开/收起聊天面板
+     */
+    function toggleChat() {
+      var panel = document.getElementById('chatPanel');
+      var overlay = document.getElementById('chatOverlay');
+      chatIsOpen = !chatIsOpen;
+
+      if (chatIsOpen) {
+        panel.classList.add('open');
+        overlay.classList.add('active');
+        // 隐藏未读点
+        var dot = document.getElementById('chatUnreadDot');
+        if (dot) dot.style.display = 'none';
+        // 滚动到底部
+        scrollChatToBottom();
+        // 聚焦输入框
+        setTimeout(function() {
+          var input = document.getElementById('chatInput');
+          if (input) input.focus();
+        }, 350);
+      } else {
+        panel.classList.remove('open');
+        overlay.classList.remove('active');
+      }
+    }
+
+    /**
+     * 发送快捷消息
+     */
+    function sendQuickChat(text) {
+      var input = document.getElementById('chatInput');
+      if (input) input.value = text;
+      sendChatMessage();
+    }
+
+    /**
+     * 输入框回车键处理
+     */
+    function onChatKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+      }
+    }
+
+    /**
+     * 发送聊天消息
+     */
+    function sendChatMessage() {
+      if (chatSending) return;
+
+      var input = document.getElementById('chatInput');
+      var message = (input?.value || '').trim();
+      if (!message) return;
+
+      // 确保有会话ID
+      if (!chatSessionId) {
+        chatSessionId = 'web_' + Date.now().toString(36);
+      }
+
+      // 清空输入框
+      input.value = '';
+      autoResizeChatInput();
+
+      // 渲染用户消息气泡
+      renderChatBubble('user', message);
+
+      // 显示打字指示器
+      showChatTyping(true);
+      scrollChatToBottom();
+
+      // 禁用发送按钮
+      chatSending = true;
+      var sendBtn = document.getElementById('chatSendBtn');
+      if (sendBtn) sendBtn.disabled = true;
+
+      // 获取当前城市（从规划器输入框）
+      var city = document.getElementById('cityInput')?.value || '';
+
+      // 调用后端API
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: chatSessionId,
+          message: message,
+          city: city || undefined,
+        }),
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        showChatTyping(false);
+
+        if (data.success) {
+          // 渲染小次回复
+          var replyText = data.cleanText || data.reply || '（无回复）';
+          renderChatBubble('assistant', replyText, data.places, data.routes);
+
+          // 语音自动播报
+          if (chatVoiceEnabled) {
+            if (!voiceState.checked) {
+              checkTTSEngine();
+            }
+            // 延迟一点让气泡渲染完毕再开始语音
+            setTimeout(function() {
+              speakChatReply(replyText);
+            }, 300);
+          }
+
+          // 如果触发了规划，渲染地图
+          if (data.intent === 'plan' && data.planData && data.planData.mapData) {
+            // 同步城市信息
+            if (data.planData.city && !city) {
+              var cityInput = document.getElementById('cityInput');
+              if (cityInput) cityInput.value = data.planData.city;
+            }
+            // 延迟一下再渲染地图，让用户先看到回复
+            setTimeout(function() {
+              showMapResult(data.planData);
+            }, 800);
+          }
+        } else {
+          renderChatBubble('assistant', '抱歉，出了点问题：' + (data.error || '未知错误'));
+        }
+      })
+      .catch(function(err) {
+        showChatTyping(false);
+        renderChatBubble('assistant', '网络出了点问题，请检查连接后重试。');
+      })
+      .finally(function() {
+        chatSending = false;
+        var sendBtn = document.getElementById('chatSendBtn');
+        if (sendBtn) sendBtn.disabled = false;
+        scrollChatToBottom();
+      });
+    }
+
+    /**
+     * 切换聊天语音播报
+     */
+    function toggleChatVoice() {
+      chatVoiceEnabled = !chatVoiceEnabled;
+      var btn = document.getElementById('chatVoiceToggle');
+      if (!btn) return;
+      if (chatVoiceEnabled) {
+        btn.classList.add('active');
+        btn.textContent = '🔊';
+        btn.title = '语音播报（已开启）';
+      } else {
+        btn.classList.remove('active');
+        btn.textContent = '🔇';
+        btn.title = '语音播报（已关闭）';
+        stopChatVoice();
+      }
+    }
+
+    /**
+     * 停止聊天语音播放
+     */
+    function stopChatVoice() {
+      if (chatAudioEl) {
+        chatAudioEl.pause();
+        chatAudioEl = null;
+      }
+      if ('speechSynthesis' in window) {
+        speechSynthesis.cancel();
+      }
+      // v2: reset voiceState for complete cleanup
+      voiceState.speaking = false;
+      voiceState.currentBtn = null;
+      // 恢复所有语音按钮状态
+      var btns = document.querySelectorAll('.chat-msg-voice-btn.playing');
+      btns.forEach(function(b) {
+        b.classList.remove('playing');
+        b.innerHTML = '🔊 播报';
+      });
+      var headerBtn = document.getElementById('chatVoiceToggle');
+      if (headerBtn) headerBtn.classList.remove('speaking');
+    }
+
+    /**
+     * 播放聊天回复语音（后端优先 → Web Speech 回退）
+     * @param {string} text - 要朗读的文本
+     * @param {HTMLElement} btnEl - 触发按钮元素（可选）
+     */
+    function speakChatReply(text, btnEl) {
+      // 如果正在播放，先停止
+      stopChatVoice();
+
+      var headerBtn = document.getElementById('chatVoiceToggle');
+
+      function onStart() {
+        if (btnEl) { btnEl.classList.add('playing'); btnEl.innerHTML = '⏸ 播放中'; }
+        if (headerBtn) headerBtn.classList.add('speaking');
+      }
+      function onEnd() {
+        if (btnEl) { btnEl.classList.remove('playing'); btnEl.innerHTML = '🔊 播报'; }
+        if (headerBtn) headerBtn.classList.remove('speaking');
+        chatAudioEl = null;
+      }
+
+      // 始终先走后端 /api/tts，后端负责引擎选择（Edge TTS / LongCat / 回退）
+      onStart();
+      var controller = new AbortController();
+      var timeoutId = setTimeout(function() { controller.abort(); }, 12000);
+      fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text, voice: 'default', speed: 0.95 }),
+        signal: controller.signal,
+      })
+      .then(function(r) {
+        clearTimeout(timeoutId);
+        var ct = r.headers.get('content-type') || '';
+        if (ct.indexOf('audio') >= 0) {
+          return r.blob().then(function(blob) {
+            var blobUrl = URL.createObjectURL(blob);
+            var audio = new Audio(blobUrl);
+            chatAudioEl = audio;
+            audio.onended = function() { URL.revokeObjectURL(blobUrl); onEnd(); };
+            audio.onerror = function() { URL.revokeObjectURL(blobUrl); speakChatWithWebSpeech(text, btnEl, onStart, onEnd); };
+            audio.play().catch(function() { URL.revokeObjectURL(blobUrl); onEnd(); });
+          });
+        }
+        // 后端返回 webspeech 回退指令
+        return r.json().then(function() { speakChatWithWebSpeech(text, btnEl, onStart, onEnd); });
+      })
+      .catch(function() { clearTimeout(timeoutId); speakChatWithWebSpeech(text, btnEl, onStart, onEnd); });
+    }
+
+    /**
+     * Web Speech 回退语音
+     */
+    function speakChatWithWebSpeech(text, btnEl, onStart, onEnd) {
+      if (!('speechSynthesis' in window)) { onEnd(); return; }
+      // v2: onStart already called by speakChatReply before fetch, skip to avoid double-fire
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN'; u.rate = 0.9; u.pitch = 1.1;
+      u.onend = onEnd;
+      u.onerror = onEnd;
+      speechSynthesis.speak(u);
+    }
+
+    /**
+     * 渲染消息气泡
+     * @param {string} role - 'user' | 'assistant'
+     * @param {string} text - 消息文本
+     * @param {Array} places - 地点标记数组（可选）
+     * @param {Array} routes - 路线标记数组（可选）
+     */
+    function renderChatBubble(role, text, places, routes) {
+      var container = document.getElementById('chatMessages');
+      var msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-msg ' + role;
+
+      // 小次头像（仅 assistant 消息）
+      if (role === 'assistant') {
+        var avatar = document.createElement('div');
+        avatar.className = 'chat-msg-avatar';
+        avatar.title = '小次';
+        msgDiv.appendChild(avatar);
+      }
+
+      // 内容容器（气泡 + 时间 + 语音按钮）
+      var contentWrap = document.createElement('div');
+      contentWrap.className = 'chat-msg-content';
+
+      var bubble = document.createElement('div');
+      bubble.className = 'chat-msg-bubble';
+
+      // 解析文本中的标记并渲染
+      bubble.innerHTML = parseChatMarkersToHTML(text, places, routes);
+
+      var timeDiv = document.createElement('div');
+      timeDiv.className = 'chat-msg-time';
+      var now = new Date();
+      timeDiv.textContent = role === 'user'
+        ? now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0')
+        : '小次';
+
+      contentWrap.appendChild(bubble);
+      contentWrap.appendChild(timeDiv);
+
+      // 小次消息添加语音播报按钮
+      if (role === 'assistant') {
+        var voiceBtn = document.createElement('button');
+        voiceBtn.className = 'chat-msg-voice-btn';
+        voiceBtn.innerHTML = '🔊 播报';
+        voiceBtn.onclick = function(e) {
+          e.stopPropagation();
+          var rawText = bubble.getAttribute('data-raw-text') || text;
+          if (this.classList.contains('playing')) {
+            stopChatVoice();
+          } else {
+            speakChatReply(rawText, this);
+          }
+        };
+        contentWrap.appendChild(voiceBtn);
+        // 保存原始文本用于语音重播
+        bubble.setAttribute('data-raw-text', text);
+      }
+
+      msgDiv.appendChild(contentWrap);
+      container.appendChild(msgDiv);
+
+      scrollChatToBottom();
+    }
+
+    /**
+     * 将文本中的标记转换为 HTML 卡片
+     */
+    function parseChatMarkersToHTML(text, places, routes) {
+      // 先转义HTML
+      var escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+
+      // 渲染地点卡片
+      if (places && places.length > 0) {
+        places.forEach(function(p, i) {
+          var icon = (p.category === 'food') ? '\u{1F35C}' : '\u{1F3DE}\u{FE0F}';
+          var cls = (p.category === 'food') ? 'chat-place-card food' : 'chat-place-card';
+          var card = '<span class="' + cls + '" onclick="onChatPlaceClick(\'' +
+            escapeAttr(p.name) + '\',' + (p.lng || 0) + ',' + (p.lat || 0) + ',\'' +
+            (p.category || 'scenic') + '\')">' + icon + ' ' + escapeHTML(p.name) + '</span>';
+          escaped = escaped + '<br>' + card;
+        });
+      }
+
+      // 渲染路线卡片
+      if (routes && routes.length > 0) {
+        routes.forEach(function(r) {
+          var modeIcon = r.mode === 'drive' ? '\u{1F697}' : '\u{1F6B6}';
+          var card = '<span class="chat-route-card">' + modeIcon + ' ' +
+            escapeHTML(r.from) + ' \u2192 ' + escapeHTML(r.to) + '</span>';
+          escaped = escaped + '<br>' + card;
+        });
+      }
+
+      return escaped;
+    }
+
+    function escapeHTML(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function escapeAttr(s) {
+      return String(s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    /**
+     * 点击聊天中的地点卡片
+     */
+    function onChatPlaceClick(name, lng, lat, category) {
+      // 如果当前有地图实例，尝试定位到该地点
+      if (window.__mapInstance && window.__mapMarkers) {
+        var markers = window.__mapMarkers;
+        for (var i = 0; i < markers.length; i++) {
+          var pos = markers[i].getPosition();
+          if (pos && Math.abs(pos.lng - lng) < 0.001 && Math.abs(pos.lat - lat) < 0.001) {
+            window.__mapInstance.setCenter(pos);
+            window.__mapInstance.setZoom(17);
+            // 触发卡片高亮
+            if (typeof highlightCard === 'function') highlightCard(i);
+            // 关闭聊天面板
+            if (chatIsOpen) toggleChat();
+            return;
+          }
+        }
+      }
+      // 没有地图时，提示用户
+      alert('点击 "' + name + '" — 先规划行程后可以在地图上查看哦！');
+    }
+
+    /**
+     * 显示/隐藏打字指示器
+     */
+    function showChatTyping(show) {
+      var typing = document.getElementById('chatTyping');
+      if (typing) {
+        if (show) {
+          typing.classList.add('active');
+        } else {
+          typing.classList.remove('active');
+        }
+      }
+    }
+
+    /**
+     * 滚动聊天区域到底部
+     */
+    function scrollChatToBottom() {
+      setTimeout(function() {
+        var container = document.getElementById('chatMessages');
+        if (container) {
+          container.scrollTop = container.scrollHeight;
+        }
+      }, 50);
+    }
+
+    /**
+     * 输入框自动调整高度
+     */
+    function autoResizeChatInput() {
+      var input = document.getElementById('chatInput');
+      if (!input) return;
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 80) + 'px';
+    }
+
+    // 绑定输入框自动调整
+    document.addEventListener('DOMContentLoaded', function() {
+      var chatInput = document.getElementById('chatInput');
+      if (chatInput) {
+        chatInput.addEventListener('input', autoResizeChatInput);
+      }
+    });
+
+    // 登录成功后初始化聊天会话（hook into handleLogin）
+    (function() {
+      var _origLogin = window.handleLogin;
+      window.handleLogin = function() {
+        var result;
+        if (typeof _origLogin === 'function') {
+          result = _origLogin.apply(this, arguments);
+        }
+        // 延迟初始化聊天，确保登录场景已切换
+        setTimeout(initChatSession, 500);
+        return result;
+      };
+    })();
+  </script>
+</body>
+</html>
