@@ -17,6 +17,30 @@
 - **语音导览** — Edge TTS 神经网络语音，自动生成城市欢迎词、美食文化概述和行程过渡文案
 - **完整 Web 体验** — Express 服务器 + 星空登录动画 + 规划面板 + 侧边栏 + 聊天面板
 
+### 🗣️ 小次主动旅伴（v2.1）
+
+小次从被动聊天工具升级为**全程旅伴**，在关键场景主动提供帮助：
+
+- **浮动气泡** — 地图页右下角呼吸动画头像，气泡对话框 5 秒自动淡出
+- **智能引导** — 输入模糊时（如"杭州"），小次主动追问 1-2 个细化问题；输入够具体则直接规划
+- **地图加载** — 规划完成后自动播放城市欢迎语音 + 弹出行程摘要气泡
+- **POI 上下文提示** — 点击地图标记，小次即时分享景点小知识或美食推荐
+- **用餐提醒** — 基于行程时间线，在用餐 POI 前 30 分钟弹出提醒
+- **空闲建议** — 30 秒无操作，小次主动推荐下一步操作
+- **心情系统** — 根据场景自动切换 emoji（😊 happy / 🤩 excited / 🤔 curious / 🍜 hungry / 💤 sleepy）
+
+### 📖 旅行手账（v2.1）
+
+路线规划完成后，一键生成可分享的手绘风旅行手账：
+
+- **手绘风模板** — CDN 手写字体（ZCOOL KuaiLe / Ma Shan Zheng / Caveat），纸张纹理，和纸胶带装饰
+- **拍立得相框** — 景点卡片带轻微旋转和阴影，优先使用真实照片
+- **时间轴布局** — 虚线连接所有站点，步行时间和用餐时间分色标注
+- **城市主题贴纸** — 自动识别城市并显示主题 emoji（杭州→🪷、成都→🐼、西安→🗿 等）
+- **季节色调** — 春夏秋冬四套配色方案自动切换
+- **成就徽章** — 根据行程数据动态生成（打卡数、菜系数、步行距离等）
+- **PNG 导出** — html2canvas 客户端渲染，无需服务器依赖，2x 高清输出
+
 ## 🏗️ 技术架构
 
 ```
@@ -72,12 +96,14 @@ cp config.example.json config.json
 
 ```json
 {
-  "webServiceKey": "高德 Web Service API Key",
-  "jsApiKey": "高德 JS API Key（前端地图使用）",
-  "securityCode": "高德 JS API 安全码",
+  "amapWebServiceKey": "高德 Web Service API Key",
+  "amapJsapiKey": "高德 JS API Key（前端地图使用）",
+  "amapSecurityJsCode": "高德 JS API 安全码",
+  "amapOverseasWebServiceKey": "高德海外 Web Service Key（可选）",
   "llmApiKey": "LLM API Key（如 DeepSeek）",
   "llmEndpoint": "https://api.deepseek.com/v1/chat/completions",
-  "llmModel": "deepseek-chat"
+  "llmModel": "deepseek-chat",
+  "appname": "gaode-map-lbs"
 }
 ```
 
