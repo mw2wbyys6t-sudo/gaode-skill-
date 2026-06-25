@@ -44,7 +44,7 @@ function loadConfig() {
     || process.env.AMAP_WEBSERVICE_KEY
     || 'f0f99d37a1379881c4d77d45d98b05a6';
 
-  return { ...config, amapWebServiceKey: key, appName: 'smart-tourism-planner' };
+  return { ...config, amapWebServiceKey: key, appName: 'gaode-map-lbs' };
 }
 
 // ========================== 工具函数 ==========================

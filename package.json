@@ -1,14 +1,17 @@
 {
-  "name": "smart-tourism-planner",
-  "version": "1.0.0",
+  "name": "gaode-map-lbs",
+  "version": "2.0.0",
   "description": "次元旅人 - 智能旅游规划系统：LLM意图解析 + 高德POI动态获取 + 路线优化 + 地图可视化",
   "main": "scripts/pipeline.js",
   "scripts": {
+    "start": "node server.js",
     "plan": "node scripts/pipeline.js",
     "intent": "node scripts/intent-parser.js",
     "scenic": "node scripts/scenic-data-fetcher.js",
     "route": "node scripts/route-optimizer.js",
-    "visualize": "node scripts/map-visualizer.js"
+    "visualize": "node scripts/map-visualizer.js",
+    "journal": "node scripts/journal-generator.js",
+    "tts": "python python/tts_service.py --engine edge --port 5050"
   },
   "dependencies": {
     "axios": "^1.13.6",

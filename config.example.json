@@ -1,9 +1,10 @@
 {
   "amapWebServiceKey": "your_amap_webservice_key_here",
   "amapJsapiKey": "your_amap_jsapi_key_here",
+  "amapSecurityJsCode": "your_amap_security_js_code_here",
   "amapOverseasWebServiceKey": "your_overseas_amap_key_here",
   "llmEndpoint": "https://api.deepseek.com/v1/chat/completions",
   "llmApiKey": "your_llm_api_key_here",
   "llmModel": "deepseek-chat",
-  "appname": "smart-tourism-planner"
+  "appname": "gaode-map-lbs"
 }

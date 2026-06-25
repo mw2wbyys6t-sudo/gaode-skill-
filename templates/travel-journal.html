@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>旅行手账</title>
+  <!-- CDN Fonts: 手写体 -->
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================================
+       旅行手账 — 手绘风视觉系统
+       ============================================================ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --paper-bg: #faf6f0;
+      --paper-shadow: rgba(0,0,0,0.08);
+      --ink-color: #3a3226;
+      --accent-warm: #e8a87c;
+      --accent-cool: #85c1e9;
+      --accent-green: #82c99a;
+      --accent-pink: #f5b7c5;
+      --tape-yellow: rgba(255, 223, 100, 0.55);
+      --tape-pink: rgba(255, 182, 193, 0.45);
+      --tape-blue: rgba(173, 216, 230, 0.45);
+      --tape-green: rgba(152, 251, 152, 0.40);
+      --font-hand: 'ZCOOL KuaiLe', 'Ma Shan Zheng', cursive;
+      --font-brush: 'Ma Shan Zheng', cursive;
+      --font-en: 'Caveat', cursive;
+    }
+
+    /* 季节色调 */
+    .season-spring { --season-primary: #f8c8dc; --season-secondary: #b5e8b5; --season-bg: #fff9f5; }
+    .season-summer { --season-primary: #ff9a56; --season-secondary: #56b4e9; --season-bg: #fffdf5; }
+    .season-autumn { --season-primary: #d4a055; --season-secondary: #8b5e3c; --season-bg: #fdf8f0; }
+    .season-winter { --season-primary: #b0c4de; --season-secondary: #808080; --season-bg: #f8f9fa; }
+
+    body {
+      background: #e8e0d8;
+      font-family: var(--font-hand);
+      color: var(--ink-color);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .journal {
+      width: 680px;
+      max-width: 100%;
+      background: var(--paper-bg);
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(200,180,160,0.15) 28px),
+        repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(200,180,160,0.08) 28px);
+      box-shadow:
+        0 2px 8px var(--paper-shadow),
+        0 12px 40px rgba(0,0,0,0.12),
+        inset 0 0 60px rgba(200,180,160,0.1);
+      border-radius: 4px;
+      padding: 40px 36px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .journal::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(255,240,220,0.3), transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(220,200,180,0.15), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .journal > * { position: relative; z-index: 1; }
+
+    /* 和纸胶带 */
+    .washi-tape {
+      position: absolute;
+      height: 24px;
+      border-radius: 2px;
+      z-index: 2;
+      opacity: 0.85;
+    }
+    .washi-tape.yellow { background: var(--tape-yellow); width: 120px; transform: rotate(-3deg); }
+    .washi-tape.pink   { background: var(--tape-pink);   width: 90px;  transform: rotate(2deg); }
+    .washi-tape.blue   { background: var(--tape-blue);   width: 100px; transform: rotate(-1.5deg); }
+    .washi-tape.green  { background: var(--tape-green);  width: 80px;  transform: rotate(3deg); }
+
+    /* 封面 */
+    .journal-cover {
+      text-align: center;
+      padding: 30px 0 20px;
+      margin-bottom: 30px;
+      border-bottom: 2px dashed rgba(200,180,160,0.4);
+    }
+    .journal-cover h1 {
+      font-family: var(--font-brush);
+      font-size: 52px;
+      font-weight: 400;
+      color: var(--ink-color);
+      letter-spacing: 4px;
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.06);
+      margin-bottom: 8px;
+    }
+    .journal-cover .subtitle {
+      font-family: var(--font-en);
+      font-size: 22px;
+      color: #a08060;
+      font-weight: 400;
+      margin-bottom: 16px;
+    }
+    .journal-cover .date {
+      font-family: var(--font-hand);
+      font-size: 16px;
+      color: #b0a090;
+      display: inline-block;
+      background: rgba(255,255,255,0.5);
+      padding: 4px 16px;
+      border-radius: 12px;
+      border: 1px dashed rgba(180,160,140,0.3);
+    }
+    .hero-frame {
+      margin: 20px auto 0;
+      width: 380px;
+      max-width: 90%;
+      background: #fff;
+      padding: 12px 12px 30px;
+      box-shadow: 2px 3px 12px rgba(0,0,0,0.1);
+      transform: rotate(-1.5deg);
+      display: inline-block;
+    }
+    .hero-frame .hero-img {
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(135deg, var(--accent-cool), var(--accent-warm));
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      color: rgba(255,255,255,0.8);
+    }
+    .hero-frame .hero-img img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 2px;
+    }
+    .hero-frame .hero-caption {
+      font-family: var(--font-en);
+      font-size: 15px;
+      color: #999;
+      margin-top: 8px;
+      text-align: center;
+    }
+
+    /* 行程概览 */
+    .journey-overview { margin: 30px 0; padding: 20px 0; }
+    .journey-overview h2 {
+      font-family: var(--font-brush);
+      font-size: 28px;
+      color: var(--ink-color);
+      margin-bottom: 20px;
+      padding-left: 8px;
+      border-left: 4px solid var(--accent-warm);
+    }
+    .timeline { position: relative; padding-left: 40px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 15px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: repeating-linear-gradient(to bottom, var(--accent-warm) 0px, var(--accent-warm) 6px, transparent 6px, transparent 12px);
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 16px;
+      padding: 8px 14px;
+      background: rgba(255,255,255,0.4);
+      border-radius: 8px;
+      border: 1px solid rgba(200,180,160,0.2);
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -32px;
+      top: 12px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-warm);
+      border: 2px solid var(--paper-bg);
+      box-shadow: 0 0 0 2px var(--accent-warm);
+    }
+    .timeline-item.meal::before {
+      background: var(--accent-pink);
+      box-shadow: 0 0 0 2px var(--accent-pink);
+    }
+    .timeline-item .tl-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .timeline-item .tl-number {
+      font-family: var(--font-en);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent-warm);
+      min-width: 24px;
+    }
+    .timeline-item .tl-name { font-family: var(--font-hand); font-size: 17px; color: var(--ink-color); }
+    .timeline-item .tl-meta { font-size: 13px; color: #a09080; display: flex; gap: 12px; flex-wrap: wrap; }
+    .timeline-item .tl-walk { color: var(--accent-cool); }
+
+    .journey-stats { display: flex; justify-content: center; gap: 24px; margin: 20px 0 10px; flex-wrap: wrap; }
+    .stat-badge {
+      background: rgba(255,255,255,0.6);
+      border: 1.5px dashed rgba(180,160,140,0.35);
+      border-radius: 16px;
+      padding: 8px 18px;
+      text-align: center;
+      min-width: 100px;
+    }
+    .stat-badge .stat-num {
+      font-family: var(--font-en);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent-warm);
+      display: block;
+    }
+    .stat-badge .stat-label { font-size: 13px; color: #a09080; }
+
+    /* 景点拍立得 */
+    .poi-section { margin: 36px 0; }
+    .poi-section h2 {
+      font-family: var(--font-brush);
+      font-size: 28px;
+      color: var(--ink-color);
+      margin-bottom: 20px;
+      padding-left: 8px;
+      border-left: 4px solid var(--accent-green);
+    }
+    .poi-grid { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; }
+    .polaroid {
+      width: 200px;
+      background: #fff;
+      padding: 10px 10px 24px;
+      box-shadow: 2px 3px 10px rgba(0,0,0,0.08);
+    }
+    .polaroid:nth-child(odd)  { transform: rotate(-2deg); }
+    .polaroid:nth-child(even) { transform: rotate(1.5deg); }
+    .polaroid:nth-child(3n)   { transform: rotate(-0.5deg); }
+    .polaroid .photo {
+      width: 100%;
+      height: 140px;
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      color: rgba(255,255,255,0.7);
+      position: relative;
+      overflow: hidden;
+    }
+    .polaroid .photo.scenic { background: linear-gradient(135deg, #74b9ff, #a29bfe); }
+    .polaroid .photo.food   { background: linear-gradient(135deg, #fd79a8, #e17055); }
+    .polaroid .photo.drink  { background: linear-gradient(135deg, #55efc4, #81ecec); }
+    .polaroid .photo img { width: 100%; height: 100%; object-fit: cover; }
+    .polaroid .caption { padding-top: 8px; text-align: center; }
+    .polaroid .caption .poi-name { font-family: var(--font-hand); font-size: 15px; color: var(--ink-color); margin-bottom: 4px; }
+    .polaroid .caption .poi-desc { font-size: 12px; color: #999; line-height: 1.4; }
+    .polaroid .caption .poi-stars { color: #f5b041; font-size: 12px; margin-top: 4px; }
+    .polaroid .caption .poi-duration { font-family: var(--font-en); font-size: 13px; color: var(--accent-cool); margin-top: 2px; }
+
+    /* 美食专区 */
+    .food-section { margin: 36px 0; }
+    .food-section h2 {
+      font-family: var(--font-brush);
+      font-size: 28px;
+      color: var(--ink-color);
+      margin-bottom: 20px;
+      padding-left: 8px;
+      border-left: 4px solid var(--accent-pink);
+    }
+    .food-card {
+      background: rgba(255,255,255,0.5);
+      border: 1px solid rgba(200,180,160,0.2);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .food-card::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 30px;
+      width: 60px;
+      height: 20px;
+      background: var(--tape-pink);
+      border-radius: 2px;
+      transform: rotate(-2deg);
+    }
+    .food-card .food-name { font-family: var(--font-hand); font-size: 18px; color: var(--ink-color); margin-bottom: 6px; }
+    .food-card .food-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+    .food-card .food-tag {
+      font-size: 12px;
+      background: rgba(253,121,168,0.15);
+      color: #e17055;
+      padding: 2px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(253,121,168,0.2);
+    }
+    .food-card .food-cost { font-family: var(--font-en); font-size: 16px; color: var(--accent-warm); font-weight: 700; }
+    .food-card .food-desc { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.5; }
+
+    /* 语音日记 */
+    .narration-section { margin: 36px 0; }
+    .narration-section h2 {
+      font-family: var(--font-brush);
+      font-size: 28px;
+      color: var(--ink-color);
+      margin-bottom: 20px;
+      padding-left: 8px;
+      border-left: 4px solid var(--accent-cool);
+    }
+    .diary-entry {
+      font-family: var(--font-brush);
+      font-size: 18px;
+      font-style: italic;
+      color: #6a5a4a;
+      line-height: 2;
+      padding: 16px 20px;
+      background: rgba(255,255,255,0.3);
+      border-left: 3px solid var(--accent-cool);
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 16px;
+    }
+    .diary-entry .diary-label {
+      font-family: var(--font-en);
+      font-size: 14px;
+      color: #b0a090;
+      font-style: normal;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    /* 城市贴纸 */
+    .city-sticker { position: absolute; z-index: 3; font-size: 42px; opacity: 0.25; transform: rotate(-15deg); }
+    .city-sticker.top-right   { top: 60px;    right: 30px; }
+    .city-sticker.bottom-left { bottom: 100px; left: 30px; }
+
+    /* 成就徽章 */
+    .achievements { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin: 30px 0 20px; }
+    .achievement {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.6);
+      border: 1.5px solid rgba(200,180,160,0.3);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: var(--ink-color);
+    }
+    .achievement .badge-icon { font-size: 18px; }
+
+    /* 页脚 */
+    .journal-footer {
+      text-align: center;
+      padding-top: 24px;
+      margin-top: 20px;
+      border-top: 2px dashed rgba(200,180,160,0.3);
+    }
+    .journal-footer .watermark { font-family: var(--font-en); font-size: 16px; color: rgba(160,140,120,0.5); letter-spacing: 2px; }
+    .journal-footer .watermark-cn { font-family: var(--font-hand); font-size: 14px; color: rgba(160,140,120,0.4); margin-top: 4px; }
+
+    /* 动画 */
+    @keyframes cardFadeIn {
+      from { opacity: 0; transform: translateY(20px) rotate(0deg); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .polaroid, .food-card, .diary-entry, .timeline-item { animation: cardFadeIn 0.5s ease backwards; }
+    .polaroid:nth-child(1) { animation-delay: 0.1s; }
+    .polaroid:nth-child(2) { animation-delay: 0.2s; }
+    .polaroid:nth-child(3) { animation-delay: 0.3s; }
+    .polaroid:nth-child(4) { animation-delay: 0.4s; }
+    .polaroid:nth-child(5) { animation-delay: 0.5s; }
+    .polaroid:nth-child(6) { animation-delay: 0.6s; }
+    .food-card:nth-child(1) { animation-delay: 0.2s; }
+    .food-card:nth-child(2) { animation-delay: 0.35s; }
+    .food-card:nth-child(3) { animation-delay: 0.5s; }
+  </style>
+</head>
+<body>
+  <div class="journal" id="journalContent">
+    <!-- 和纸胶带 -->
+    <div class="washi-tape yellow" style="top: -4px; left: 40px;"></div>
+    <div class="washi-tape pink" style="top: -6px; right: 60px;"></div>
+    <div class="washi-tape blue" style="bottom: 30px; right: 20px;"></div>
+
+    <!-- 城市贴纸 -->
+    <div class="city-sticker top-right" id="stickerTopRight"></div>
+    <div class="city-sticker bottom-left" id="stickerBottomLeft"></div>
+
+    <!-- 封面 -->
+    <section class="journal-cover">
+      <h1 id="journalCity">旅行手账</h1>
+      <div class="subtitle" id="journalSubtitle">Travel Journal</div>
+      <div class="date" id="journalDate"></div>
+      <div class="hero-frame">
+        <div class="hero-img" id="heroImg"></div>
+        <div class="hero-caption" id="heroCaption"></div>
+      </div>
+    </section>
+
+    <!-- 行程概览 -->
+    <section class="journey-overview">
+      <h2>行程概览</h2>
+      <div class="journey-stats" id="journeyStats"></div>
+      <div class="timeline" id="journeyTimeline"></div>
+    </section>
+
+    <!-- 景点拍立得 -->
+    <section class="poi-section" id="scenicSection">
+      <h2>打卡景点</h2>
+      <div class="poi-grid" id="scenicGrid"></div>
+    </section>
+
+    <!-- 美食专区 -->
+    <section class="food-section" id="foodSection">
+      <h2>美食地图</h2>
+      <div id="foodCards"></div>
+    </section>
+
+    <!-- 语音日记 -->
+    <section class="narration-section" id="narrationSection">
+      <h2>旅行日记</h2>
+      <div id="diaryEntries"></div>
+    </section>
+
+    <!-- 成就徽章 -->
+    <div class="achievements" id="achievements"></div>
+
+    <!-- 页脚 -->
+    <footer class="journal-footer">
+      <div class="watermark">Travel Journal by Dimension Traveler</div>
+      <div class="watermark-cn">次元旅人 · 智能旅行手账</div>
+    </footer>
+  </div>
+
+  <script>
+    // ============================================================
+    // 数据注入点
+    // ============================================================
+    var __JOURNAL_DATA__ = {};
+
+    // ============================================================
+    // 渲染引擎
+    // ============================================================
+    (function() {
+      var data = window.__JOURNAL_DATA__ || __JOURNAL_DATA__;
+      if (!data || !data.pois || data.pois.length === 0) return;
+
+      var pois = data.pois || [];
+      var segments = data.segments || [];
+      var narrations = data.narrations || [];
+      var city = data.city || '';
+      var scenicName = data.scenic_name || '';
+      var cityWelcome = data.city_welcome || '';
+      var foodSummary = data.food_summary || '';
+      var date = data.date || new Date().toLocaleDateString('zh-CN');
+
+      // 季节
+      var month = new Date().getMonth() + 1;
+      var seasonClass = 'season-spring';
+      if (month >= 6 && month <= 8) seasonClass = 'season-summer';
+      else if (month >= 9 && month <= 11) seasonClass = 'season-autumn';
+      else if (month === 12 || month <= 2) seasonClass = 'season-winter';
+      document.querySelector('.journal').classList.add(seasonClass);
+
+      // 城市贴纸
+      var stickers = {
+        '\u676D\u5DDE':'\uD83E\uDEB7','\u897F\u6E56':'\uD83E\uDEB7','\u5317\u4EAC':'\uD83C\uDFF0','\u6545\u5BAB':'\uD83C\uDFF0',
+        '\u6210\u90FD':'\uD83D\uDC3C','\u897F\u5B89':'\uD83D\uDDFF','\u4E0A\u6D77':'\uD83C\uDF03','\u91CD\u5E86':'\uD83C\uDF36\uFE0F',
+        '\u5E7F\u5DDE':'\uD83E\uDD5F','\u957F\u6C99':'\uD83C\uDF36\uFE0F','\u5357\u4EAC':'\uD83C\uDF42','\u82CF\u5DDE':'\uD83C\uDFEE',
+        '\u53A6\u95E8':'\uD83C\uDFD6\uFE0F','\u9752\u5C9B':'\uD83C\uDF7A','\u5927\u7406':'\uD83C\uDFD4\uFE0F','\u4E3D\u6C5F':'\uD83C\uDFD4\uFE0F'
+      };
+      var sticker = stickers[city] || stickers[scenicName] || '\u2728';
+      var el1 = document.getElementById('stickerTopRight');
+      var el2 = document.getElementById('stickerBottomLeft');
+      if (el1) el1.textContent = sticker;
+      if (el2) el2.textContent = sticker;
+
+      // 封面
+      document.getElementById('journalCity').textContent = city || '\u65C5\u884C\u624B\u8D26';
+      document.getElementById('journalSubtitle').textContent = scenicName || 'Travel Journal';
+      document.getElementById('journalDate').textContent = date;
+      var heroImg = document.getElementById('heroImg');
+      var firstPhoto = null;
+      for (var i = 0; i < pois.length; i++) {
+        if (pois[i].photos && pois[i].photos.length > 0 && pois[i].photos[0].url) {
+          firstPhoto = pois[i].photos[0].url;
+          break;
+        }
+      }
+      if (firstPhoto) {
+        heroImg.innerHTML = '<img src="' + firstPhoto + '" alt="hero" crossorigin="anonymous">';
+      } else {
+        heroImg.innerHTML = '\uD83D\uDDFA\uFE0F';
+      }
+      document.getElementById('heroCaption').textContent = scenicName ? scenicName + ' \u00B7 ' + city : city;
+
+      // 统计
+      var scenicPois = pois.filter(function(p) { return p._category !== 'food' && p._category !== 'drink'; });
+      var foodPois = pois.filter(function(p) { return p._category === 'food' || p._category === 'drink'; });
+      var totalMin = data.total_duration_min || 0;
+      var walkMin = data.total_walking_min || 0;
+      var durStr = totalMin >= 60 ? Math.floor(totalMin/60) + 'h' + (totalMin%60>0 ? totalMin%60 + 'm' : '') : totalMin + 'min';
+      var walkStr = walkMin >= 60 ? Math.floor(walkMin/60) + 'h' + (walkMin%60>0 ? walkMin%60 + 'm' : '') : walkMin + 'min';
+      document.getElementById('journeyStats').innerHTML =
+        '<div class="stat-badge"><span class="stat-num">' + pois.length + '</span><span class="stat-label">\u4E2A\u7AD9\u70B9</span></div>' +
+        '<div class="stat-badge"><span class="stat-num">' + scenicPois.length + '</span><span class="stat-label">\u666F\u70B9</span></div>' +
+        '<div class="stat-badge"><span class="stat-num">' + foodPois.length + '</span><span class="stat-label">\u7F8E\u98DF</span></div>' +
+        '<div class="stat-badge"><span class="stat-num">' + durStr + '</span><span class="stat-label">\u603B\u65F6\u957F</span></div>' +
+        '<div class="stat-badge"><span class="stat-num">' + walkStr + '</span><span class="stat-label">\u6B65\u884C</span></div>';
+
+      // 时间轴
+      var tl = '';
+      pois.forEach(function(poi, idx) {
+        var isMeal = poi._category === 'food' || poi._category === 'drink';
+        var walkInfo = '';
+        if (idx > 0 && segments[idx-1]) {
+          walkInfo = '<span class="tl-walk">\uD83D\uDEB6 ' + (segments[idx-1].duration_min || segments[idx-1].walking_min || '?') + 'min</span>';
+        }
+        var durInfo = poi.duration_min ? '<span>\u23F1 ' + poi.duration_min + 'min</span>' : '';
+        tl += '<div class="timeline-item' + (isMeal ? ' meal' : '') + '"><div class="tl-header">' +
+          '<span class="tl-number">' + (idx+1) + '</span><span class="tl-name">' + (poi.name || '') + '</span></div>' +
+          '<div class="tl-meta">' + walkInfo + durInfo + '</div></div>';
+      });
+      document.getElementById('journeyTimeline').innerHTML = tl;
+
+      // 景点拍立得
+      var sg = '';
+      scenicPois.forEach(function(poi) {
+        var photo = '';
+        if (poi.photos && poi.photos.length > 0 && poi.photos[0].url) {
+          photo = '<img src="' + poi.photos[0].url + '" alt="' + (poi.name||'') + '" crossorigin="anonymous">';
+        } else { photo = '\uD83C\uDFDB\uFE0F'; }
+        var stars = '';
+        if (poi.rating) { for (var s=0; s<Math.min(5,Math.round(poi.rating)); s++) stars += '\u2605'; }
+        var desc = poi.description || '';
+        if (desc.length > 30) desc = desc.substring(0,27) + '...';
+        sg += '<div class="polaroid"><div class="photo scenic">' + photo + '</div><div class="caption">' +
+          '<div class="poi-name">' + (poi.name||'') + '</div>' +
+          (desc ? '<div class="poi-desc">' + desc + '</div>' : '') +
+          (stars ? '<div class="poi-stars">' + stars + '</div>' : '') +
+          (poi.duration_min ? '<div class="poi-duration">' + poi.duration_min + ' min</div>' : '') +
+          '</div></div>';
+      });
+      document.getElementById('scenicGrid').innerHTML = sg;
+
+      // 美食
+      var fc = '';
+      foodPois.forEach(function(poi) {
+        var tags = [];
+        if (poi._cuisine_type) tags.push(poi._cuisine_type);
+        if (poi._category === 'drink') tags.push('\u996E\u54C1');
+        if (poi.tags && poi.tags.length) tags = tags.concat(poi.tags.slice(0,2));
+        var tagsHtml = tags.map(function(t){return '<span class="food-tag">'+t+'</span>';}).join('');
+        var costHtml = poi._avg_cost ? '<span class="food-cost">\u4EBA\u5747 \u00A5' + poi._avg_cost + '</span>' : '';
+        var desc = poi.description || '';
+        if (desc.length > 50) desc = desc.substring(0,47) + '...';
+        fc += '<div class="food-card"><div class="food-name">' + (poi.name||'') + '</div>' +
+          (tagsHtml ? '<div class="food-tags">' + tagsHtml + '</div>' : '') +
+          costHtml + (desc ? '<div class="food-desc">' + desc + '</div>' : '') + '</div>';
+      });
+      if (foodSummary) {
+        fc += '<div class="diary-entry" style="margin-top:12px;"><span class="diary-label">Food Summary</span>' + foodSummary + '</div>';
+      }
+      document.getElementById('foodCards').innerHTML = fc;
+      if (foodPois.length === 0) document.getElementById('foodSection').style.display = 'none';
+
+      // 语音日记
+      var de = '';
+      if (cityWelcome) de += '<div class="diary-entry"><span class="diary-label">City Welcome</span>' + cityWelcome + '</div>';
+      narrations.forEach(function(text, i) {
+        if (text && text.trim()) de += '<div class="diary-entry"><span class="diary-label">Stop ' + (i+1) + '</span>' + text + '</div>';
+      });
+      document.getElementById('diaryEntries').innerHTML = de;
+      if (!de) document.getElementById('narrationSection').style.display = 'none';
+
+      // 成就徽章
+      var badges = [];
+      if (pois.length >= 5) badges.push({icon:'\uD83D\uDCCD', text:'\u6253\u5361 ' + pois.length + ' \u4E2A\u7AD9\u70B9'});
+      if (scenicPois.length >= 3) badges.push({icon:'\uD83C\uDFDB\uFE0F', text:'\u63A2\u7D22 ' + scenicPois.length + ' \u4E2A\u666F\u70B9'});
+      if (foodPois.length >= 2) badges.push({icon:'\uD83C\uDF5C', text:'\u54C1\u5C1D ' + foodPois.length + ' \u5BB6\u7F8E\u98DF'});
+      var cuisines = {};
+      foodPois.forEach(function(p){if(p._cuisine_type) cuisines[p._cuisine_type]=true;});
+      var cc = Object.keys(cuisines).length;
+      if (cc >= 2) badges.push({icon:'\uD83C\uDF0D', text:'\u6A2A\u8DE8 ' + cc + ' \u79CD\u83DC\u7CFB'});
+      if (walkMin >= 60) badges.push({icon:'\uD83D\uDEB6', text:'\u6B65\u884C ' + (Math.round(walkMin/10)/10) + ' \u516C\u91CC'});
+      if (totalMin >= 480) badges.push({icon:'\u23F0', text:'\u5145\u5B9E\u7684 8 \u5C0F\u65F6\u884C\u7A0B'});
+      document.getElementById('achievements').innerHTML = badges.map(function(b){
+        return '<div class="achievement"><span class="badge-icon">' + b.icon + '</span>' + b.text + '</div>';
+      }).join('');
+    })();
+  </script>
+</body>
+</html>

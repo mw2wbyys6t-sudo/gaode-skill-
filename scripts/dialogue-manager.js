@@ -545,12 +545,108 @@ function updateSessionState(sessionId, patch) {
 }
 
 
+/**
+ * 生成主动消息（无需用户输入，由系统触发）。
+ *
+ * @param {Object} context - 触发上下文 { stage, city, poi, poiIndex, planSummary, ... }
+ * @param {string} trigger - 触发类型：plan_start | plan_complete | poi_viewed | meal_time | idle
+ * @param {string} sessionId - 会话ID
+ * @returns {Promise<Object>} { reply, cleanText, mood }
+ */
+async function generateProactiveMessage(context, trigger, sessionId) {
+  const llmConfig = loadLLMConfig();
+
+  // 构造合成提示，引导 LLM 以小次语气输出简短主动消息
+  let syntheticMessage = '';
+  let mood = 'happy'; // 默认心情
+
+  switch (trigger) {
+    case 'plan_start':
+      syntheticMessage = `[系统提示] 用户刚输入了"${context.userInput || ''}"想要规划行程。请用小次的语气，简短地问1-2个问题帮助细化需求（比如想逛哪个景区、玩多久、喜欢什么类型的美食）。不要超过2句话。`;
+      mood = 'curious';
+      break;
+    case 'plan_complete':
+      syntheticMessage = `[系统提示] 路线规划刚完成！城市：${context.city || ''}，景区：${context.scenicName || ''}，共${context.poiCount || 0}个地点（${context.scenicCount || 0}景点+${context.foodCount || 0}美食），总时长约${context.totalDuration || ''}。请用小次的语气，兴奋地用1-2句话介绍这次行程的亮点，问用户想不想听某个具体地点的介绍。`;
+      mood = 'excited';
+      break;
+    case 'poi_viewed':
+      syntheticMessage = `[系统提示] 用户正在查看「${context.poiName || ''}」的详情。${context.poiDescription ? '简介：' + context.poiDescription.slice(0, 100) : ''}。请用小次的语气分享一个有趣的小知识、拍照建议或当地小贴士，不超过2句话。`;
+      mood = 'happy';
+      break;
+    case 'meal_time':
+      syntheticMessage = `[系统提示] 快到用餐时间了！下一站是「${context.poiName || ''}」，${context.cuisineType ? '菜系：' + context.cuisineType : ''}，${context.avgCost ? '人均' + context.avgCost + '元' : ''}。请用小次的语气提醒用户，并推荐一道招牌菜或给出用餐建议，不超过2句话。`;
+      mood = 'hungry';
+      break;
+    case 'idle':
+      syntheticMessage = `[系统提示] 用户在地图页已经停留了一会儿没有操作。请用小次的语气给出一个友好的建议，比如"要不要听听下一个景点的介绍？"、"我可以帮你找附近有什么好喝的～"或"点击地图上的标记可以查看详情哦！"。每次内容不要重复，不超过1句话。`;
+      mood = 'sleepy';
+      break;
+    default:
+      syntheticMessage = `[系统提示] 请用小次的语气说一句简短的友好问候或旅行小贴士。`;
+      mood = 'happy';
+  }
+
+  try {
+    const session = sessionStore.getOrCreateSession(sessionId);
+    const currentState = sessionStore.getSessionState(sessionId);
+    const systemPrompt = XIAO_CI_SYSTEM_PROMPT + buildContextBlock(currentState);
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: syntheticMessage },
+    ];
+
+    const reply = await callLLM(messages, { ...llmConfig, maxTokens: 256 });
+    const { cleanText } = parseMarkers(reply);
+
+    // 记录到会话（标记为系统触发的主动消息）
+    sessionStore.addMessage(sessionId, 'assistant', reply, 10);
+
+    return { reply, cleanText, mood };
+  } catch (err) {
+    console.error('[小次] 主动消息生成失败:', err.message);
+    // 返回本地回退模板
+    const fallback = getLocalFallback(trigger, context);
+    return { reply: fallback, cleanText: fallback, mood };
+  }
+}
+
+/**
+ * 本地回退模板（LLM 不可用时使用）。
+ */
+function getLocalFallback(trigger, context) {
+  const tips = {
+    plan_start: ['想去哪里玩呀？告诉我城市和时间，我帮你安排得明明白白！'],
+    plan_complete: [
+      '哇，路线规划好啦！有好几个超棒的地方等你去探索哦～',
+      '行程已经安排好了！要不要我介绍一下其中某个地方？',
+    ],
+    poi_viewed: [
+      '这里很值得慢慢逛哦，别着急！',
+      '据说这里拍照超好看的，记得多拍几张！',
+    ],
+    meal_time: [
+      '到饭点啦，先吃点东西再出发吧！',
+      '听说这家的招牌菜很不错，可以试试看哦～',
+    ],
+    idle: [
+      '要不要听听下一个景点的介绍呀？',
+      '点击地图上的标记可以查看详情哦！',
+      '我可以帮你找找附近有什么好喝的～',
+    ],
+  };
+  const pool = tips[trigger] || tips.idle;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+
 // ============================================================
 // 导出
 // ============================================================
 
 module.exports = {
   chat,
+  generateProactiveMessage,
   XIAO_CI_SYSTEM_PROMPT,
   parseMarkers,
   classifyIntent,

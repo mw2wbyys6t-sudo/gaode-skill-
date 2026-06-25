@@ -34,6 +34,15 @@ const TTS_PORT = parseInt(process.env.TTS_PORT || '5050', 10);
 let ttsAvailable = null;  // null=未检测, true=可用, false=不可用
 let ttsEngineName = null; // TTS 引擎名称（从 Python 服务动态获取）
 
+// --- 安全中间件：阻止访问敏感文件 ---
+const BLOCKED_FILES = ['/config.json', '/config.example.json', '/.env', '/package.json', '/.gitignore', '/.git'];
+app.use((req, res, next) => {
+  if (BLOCKED_FILES.some(f => req.path === f || req.path.startsWith(f + '/'))) {
+    return res.status(403).send('Forbidden');
+  }
+  next();
+});
+
 // --- 静态文件服务 ---
 app.use(express.static(__dirname));
 app.use(express.json({ limit: '1mb' }));
@@ -357,6 +366,40 @@ app.post('/api/chat', async (req, res) => {
 
   } catch (err) {
     console.error('[小次] 对话处理失败:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- API: 小次主动消息（系统触发，无需用户输入） ---
+app.post('/api/chat/proactive', async (req, res) => {
+  const { sessionId, context, trigger } = req.body || {};
+
+  if (!trigger) {
+    return res.status(400).json({ error: '缺少 trigger 参数' });
+  }
+
+  const sid = sessionStore.resolveSessionId(sessionId || null);
+  console.log(`[小次] 主动消息触发 (${sid}): trigger=${trigger}`);
+
+  try {
+    const result = await dialogueManager.generateProactiveMessage(
+      context || {}, trigger, sid
+    );
+
+    // 更新最后主动消息时间戳
+    sessionStore.updateState(sid, {
+      lastProactiveTimestamp: Date.now(),
+      proactiveOptIn: true,
+    });
+
+    res.json({
+      success: true,
+      reply: result.cleanText,
+      mood: result.mood,
+      trigger,
+    });
+  } catch (err) {
+    console.error('[小次] 主动消息生成失败:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

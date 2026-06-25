@@ -1168,7 +1168,257 @@
         right: -100%;
       }
     }
+
+    /* ============================================================
+       小次浮动气泡 — Phase 1 主动旅伴 UI
+       ============================================================ */
+    .xiao-ci-bubble {
+      position: fixed;
+      right: 24px;
+      bottom: 90px;
+      z-index: 960;
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: flex-end;
+      gap: 8px;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .xiao-ci-bubble.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .xiao-ci-bubble-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      border: 2px solid rgba(255,255,255,0.3);
+      cursor: pointer;
+      animation: bubbleFloat 3s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #fff;
+      flex-shrink: 0;
+      box-shadow: 0 4px 15px rgba(108,92,231,0.4);
+      position: relative;
+      transition: transform 0.2s ease;
+    }
+    .xiao-ci-bubble-avatar:hover {
+      transform: scale(1.1);
+    }
+    .xiao-ci-bubble-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    @keyframes bubbleFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+    .xiao-ci-speech {
+      max-width: 240px;
+      background: rgba(255,255,255,0.95);
+      color: #333;
+      border-radius: 14px 14px 4px 14px;
+      padding: 10px 14px;
+      font-size: 13px;
+      line-height: 1.5;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+      position: relative;
+      opacity: 0;
+      transform: scale(0.9) translateX(10px);
+      transition: opacity 0.3s ease 0.15s, transform 0.3s ease 0.15s;
+    }
+    .xiao-ci-bubble.visible .xiao-ci-speech {
+      opacity: 1;
+      transform: scale(1) translateX(0);
+    }
+    .xiao-ci-speech::after {
+      content: '';
+      position: absolute;
+      right: -6px;
+      bottom: 10px;
+      width: 0;
+      height: 0;
+      border: 6px solid transparent;
+      border-left-color: rgba(255,255,255,0.95);
+      border-right: 0;
+    }
+    .xiao-ci-mood {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      font-size: 16px;
+      line-height: 1;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+      transition: all 0.3s ease;
+    }
+    .xiao-ci-speech-close {
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.08);
+      border: none;
+      cursor: pointer;
+      font-size: 10px;
+      color: #999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .xiao-ci-speech:hover .xiao-ci-speech-close {
+      opacity: 1;
+    }
+    .xiao-ci-speech-close:hover {
+      background: rgba(0,0,0,0.15);
+      color: #666;
+    }
+    @media (max-width: 600px) {
+      .xiao-ci-bubble {
+        right: 12px;
+        bottom: 80px;
+      }
+      .xiao-ci-speech {
+        max-width: 180px;
+        font-size: 12px;
+      }
+    }
+
+    /* ============================================================
+       旅行手账按钮 & 模态框 — Phase 2
+       ============================================================ */
+    .journal-btn {
+      background: linear-gradient(135deg, #e8a87c, #d4886a);
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      box-shadow: 0 2px 8px rgba(232,168,124,0.3);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .journal-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(232,168,124,0.4);
+    }
+
+    .journal-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .journal-modal-overlay.active {
+      display: flex;
+    }
+    .journal-modal {
+      background: #e8e0d8;
+      border-radius: 12px;
+      width: 720px;
+      max-width: 95vw;
+      height: 85vh;
+      max-height: 900px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    .journal-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      background: rgba(255,255,255,0.6);
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      flex-shrink: 0;
+    }
+    .journal-modal-header h3 {
+      font-size: 16px;
+      color: #3a3226;
+      font-weight: 600;
+    }
+    .journal-modal-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .journal-modal-actions button {
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+    .journal-export-btn {
+      background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+      color: #fff;
+    }
+    .journal-export-btn:hover { transform: translateY(-1px); }
+    .journal-export-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .journal-close-btn {
+      background: rgba(0,0,0,0.08);
+      color: #666;
+    }
+    .journal-close-btn:hover { background: rgba(0,0,0,0.15); }
+    .journal-modal-body {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      justify-content: center;
+      padding: 0;
+    }
+    .journal-modal-body iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .journal-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: #a09080;
+    }
+    .journal-loading .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(0,0,0,0.1);
+      border-top-color: #e8a87c;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
+  <!-- html2canvas: 旅行手账 PNG 导出 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -1260,6 +1510,7 @@
           <button class="map-mode-btn" onclick="filterMapView('food', this)">&#x1F35C; 美食</button>
           <button class="map-mode-btn" onclick="filterMapView('mixed', this)">&#x1F6B6;&#x200D;&#x2642;&#xFE0F;&#x1F35C; 逛吃</button>
         </div>
+        <button class="journal-btn" onclick="openJournalModal()" title="生成旅行手账">&#x1F4D6; 旅行手账</button>
         <button class="map-back-btn" onclick="backToPlanner()">&#x2190; 重新规划</button>
       </div>
       <div id="mapViewInner"></div>
@@ -1273,6 +1524,19 @@
   <button class="chat-toggle-btn" id="chatToggleBtn" onclick="toggleChat()" title="和小次聊天">
     <span class="unread-dot" id="chatUnreadDot"></span>
   </button>
+
+  <!-- === 小次浮动气泡（主动旅伴） === -->
+  <div class="xiao-ci-bubble" id="xiaociBubble">
+    <div class="xiao-ci-bubble-avatar" onclick="hideXiaociBubble(); toggleChat();" title="和小次聊天">
+      <span class="xiao-ci-mood" id="xiaociMood">😊</span>
+      <span style="font-size:22px;">&#x2728;</span>
+    </div>
+    <div class="xiao-ci-speech" id="xiaociSpeech">
+      <button class="xiao-ci-speech-close" onclick="hideXiaociBubble()" title="关闭">&times;</button>
+      <span id="xiaociSpeechText"></span>
+    </div>
+  </div>
+
   <div class="chat-overlay" id="chatOverlay" onclick="toggleChat()"></div>
   <div class="chat-panel" id="chatPanel">
     <div class="chat-panel-header">
@@ -1445,6 +1709,14 @@
     function startPlanning() {
       const input = document.getElementById('tripInput').value.trim();
       if (!input) return;
+
+      // --- Phase 1: 智能引导判断（输入模糊时小次主动提问） ---
+      var _cityInput = document.getElementById('cityInput').value.trim();
+      if (input.length < 10 && !/\d+[天日小时h]|一日游|半日游|美食|景点|逛|玩|游/.test(input)) {
+        // 输入过短且不含时间/关键词 → 触发小次引导
+        handlePlanStartProactive(input, _cityInput);
+        return; // 暂不执行规划，等待用户补充
+      }
 
       const city = document.getElementById('cityInput').value.trim();
       const box = document.getElementById('plannerBox');
@@ -1693,6 +1965,8 @@
           );
           infoWindow.open(map, e.target.getPosition());
           highlightCard(idx);
+          // --- Phase 1: POI 上下文智能提示 ---
+          onPOIClickProactive(d, idx);
         });
 
         marker.setMap(map);
@@ -1745,6 +2019,9 @@
       window.__mapMarkers = markers;
       window.__mapPolylines = polylines;
       window.__mapInfoWindow = infoWindow;
+
+      // --- Phase 1: 地图加载后主动行为 ---
+      onMapLoadProactive(mapData);
     }
 
     // --- Render sidebar for map view ---
@@ -2327,6 +2604,10 @@
       // Cleanup voice
       stopVoice();
 
+      // --- Phase 1: 清理主动行为定时器 ---
+      cleanupProactiveTimers();
+      hideXiaociBubble();
+
       var mapContainer = document.getElementById('mapViewInner');
       if (mapContainer) mapContainer.innerHTML = '';
 
@@ -2782,6 +3063,372 @@
       }
     });
 
+    // ============================================================
+    // Phase 1: 小次主动旅伴引擎
+    // ============================================================
+
+    // --- 全局状态 ---
+    window.__mealTimers = [];
+    window.__idleTimer = null;
+    window.__idleLastActivity = Date.now();
+    window.__lastProactiveTime = 0;
+    window.__proactiveThrottle = 30000; // 30秒节流
+    window.__autoNarrationEnabled = true;
+
+    /**
+     * 显示小次浮动气泡
+     * @param {string} text - 气泡文本
+     * @param {string} [mood] - 心情 emoji
+     * @param {number} [duration=6000] - 显示时长(ms)，0=不自动消失
+     */
+    function showXiaociBubble(text, mood, duration) {
+      var bubble = document.getElementById('xiaociBubble');
+      var textEl = document.getElementById('xiaociSpeechText');
+      if (!bubble || !textEl) return;
+
+      // 节流检查
+      var now = Date.now();
+      if (now - window.__lastProactiveTime < window.__proactiveThrottle) return;
+      window.__lastProactiveTime = now;
+
+      textEl.textContent = text;
+      if (mood) updateXiaociMood(mood);
+      bubble.classList.add('visible');
+
+      // 清除旧的自动隐藏计时器
+      if (window.__bubbleHideTimer) clearTimeout(window.__bubbleHideTimer);
+
+      if (duration !== 0) {
+        window.__bubbleHideTimer = setTimeout(function() {
+          hideXiaociBubble();
+        }, duration || 6000);
+      }
+    }
+
+    /**
+     * 隐藏小次浮动气泡
+     */
+    function hideXiaociBubble() {
+      var bubble = document.getElementById('xiaociBubble');
+      if (bubble) bubble.classList.remove('visible');
+      if (window.__bubbleHideTimer) {
+        clearTimeout(window.__bubbleHideTimer);
+        window.__bubbleHideTimer = null;
+      }
+    }
+
+    /**
+     * 更新小次心情 emoji
+     * @param {string} mood - happy/excited/curious/hungry/sleepy
+     */
+    function updateXiaociMood(mood) {
+      var el = document.getElementById('xiaociMood');
+      if (!el) return;
+      var emojiMap = {
+        happy:   '\uD83D\uDE0A',  // 😊
+        excited: '\uD83E\uDD29',  // 🤩
+        curious: '\uD83E\uDD14',  // 🤔
+        hungry:  '\uD83C\uDF5C',  // 🍜
+        sleepy:  '\uD83D\uDCA4',  // 💤
+      };
+      el.textContent = emojiMap[mood] || emojiMap.happy;
+    }
+
+    /**
+     * 调用后端主动消息 API（带回退）
+     */
+    function _callProactiveAPI(context, trigger, callback) {
+      var sessionId = window.__chatSessionId || null;
+      fetch('/api/chat/proactive', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: sessionId, context: context, trigger: trigger })
+      })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        if (data && data.success && data.reply) {
+          callback(data.reply, data.mood || 'happy');
+        } else {
+          callback(null, null);
+        }
+      })
+      .catch(function() {
+        callback(null, null);
+      });
+    }
+
+    /**
+     * 本地回退消息池
+     */
+    function _localTip(trigger, context) {
+      var tips = {
+        plan_start: [
+          '想去哪里玩呀？告诉我城市和时间，我帮你安排得明明白白！',
+          '嗯，能再具体说说吗？比如想去几天、喜欢什么类型的景点？'
+        ],
+        plan_complete: [
+          '哇，路线规划好啦！有好几个超棒的地方等你去探索哦～',
+          '帮你安排好了！点击地图标记就能看到详情哦！'
+        ],
+        poi_viewed: [
+          '这里很值得慢慢逛哦，别着急！',
+          '拍照角度很棒的，记得多拍几张哦！'
+        ],
+        meal_time: [
+          '到饭点啦，先吃点东西再出发吧！',
+          '饿了吧？下一家店的招牌菜可别错过！'
+        ],
+        idle: [
+          '要不要听听下一个景点的介绍呀？',
+          '点击地图标记可以查看详情哦！',
+          '如果觉得路线不错，可以试试聊天面板和我聊聊～'
+        ]
+      };
+      var pool = tips[trigger] || tips.idle;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    /**
+     * 规划开始时的智能引导（输入模糊时触发）
+     */
+    function handlePlanStartProactive(input, city) {
+      var context = { userInput: input, city: city };
+      showXiaociBubble('让我想想你需要的信息...', 'curious', 0);
+
+      _callProactiveAPI(context, 'plan_start', function(reply, mood) {
+        if (reply) {
+          showXiaociBubble(reply, mood || 'curious', 8000);
+        } else {
+          showXiaociBubble(_localTip('plan_start', context), 'curious', 8000);
+        }
+      });
+    }
+
+    /**
+     * 地图加载完成后的主动行为
+     * - 显示欢迎气泡
+     * - 自动播放城市欢迎语音（延迟 3.5 秒）
+     * - 初始化用餐提醒
+     * - 初始化空闲检测
+     * - 更新心情
+     */
+    function onMapLoadProactive(mapData) {
+      if (!mapData) return;
+
+      var city = mapData.city || '';
+      var pois = mapData.pois || [];
+      var foodCount = pois.filter(function(p) {
+        return p._category === 'food' || p._category === 'drink';
+      }).length;
+      var totalCount = pois.length;
+
+      // 更新心情
+      if (totalCount >= 8) {
+        updateXiaociMood('excited');
+      } else {
+        updateXiaociMood('happy');
+      }
+
+      // 1. 规划完成气泡
+      var planMsg = '帮你找到 ' + totalCount + ' 个好地方！';
+      if (foodCount > 0) planMsg += '其中 ' + foodCount + ' 家超棒的餐厅哦～';
+
+      _callProactiveAPI(
+        { city: city, poiCount: totalCount, scenicName: mapData.scenic_name || '' },
+        'plan_complete',
+        function(reply, mood) {
+          showXiaociBubble(reply || planMsg, mood || 'excited', 6000);
+        }
+      );
+
+      // 2. 延迟自动播放城市欢迎语音
+      if (window.__autoNarrationEnabled && typeof playCityWelcome === 'function') {
+        var welcomeTimer = setTimeout(function() {
+          if (mapData.city_welcome) {
+            playCityWelcome();
+          }
+        }, 3500);
+        window.__mealTimers.push(welcomeTimer);
+      }
+
+      // 3. 初始化用餐提醒
+      initMealReminders(mapData);
+
+      // 4. 初始化空闲检测
+      initIdleDetection();
+    }
+
+    /**
+     * POI 标记点击时的上下文智能提示
+     */
+    function onPOIClickProactive(poi, idx) {
+      if (!poi) return;
+
+      var mapData = window.__CURRENT_MAP_DATA__;
+      var narrations = (mapData && mapData.narrations) || [];
+      var cat = poi._category || 'scenic';
+      var isFood = (cat === 'food' || cat === 'drink');
+
+      // 优先使用已有的导览文案
+      if (poi.narration !== undefined && narrations[poi.narration]) {
+        var narrationText = narrations[poi.narration];
+        if (narrationText.length > 60) narrationText = narrationText.substring(0, 57) + '...';
+        showXiaociBubble(narrationText, isFood ? 'hungry' : 'happy', 5000);
+        return;
+      }
+
+      // 本地模板回退
+      var context = { poiName: poi.name, category: cat };
+      _callProactiveAPI(context, 'poi_viewed', function(reply, mood) {
+        if (reply) {
+          showXiaociBubble(reply, mood || 'happy', 5000);
+        } else {
+          var tip;
+          if (isFood) {
+            var cuisine = poi._cuisine_type || '美食';
+            var cost = poi._avg_cost || '';
+            tip = '这家' + cuisine + '很不错的！';
+            if (cost) tip += '人均大概' + cost + '元，性价比很高哦！';
+          } else {
+            var tips = [
+              '这里拍照超好看的，记得多拍几张！',
+              '慢慢逛，这里有很多小细节值得发现！',
+              '历史很悠久的地方，仔细观察会有惊喜哦！'
+            ];
+            tip = tips[Math.floor(Math.random() * tips.length)];
+          }
+          showXiaociBubble(tip, isFood ? 'hungry' : 'happy', 5000);
+        }
+      });
+    }
+
+    /**
+     * 用餐时间提醒系统
+     * 从 POI 数据构建模拟时间线（假设 9:00 出发），
+     * 为每个用餐 POI 设置 setTimeout
+     */
+    function initMealReminders(mapData) {
+      cleanupMealTimers();
+
+      var pois = mapData.pois || [];
+      var segments = mapData.segments || [];
+      var currentTimeMin = 9 * 60; // 假设 9:00 出发
+
+      pois.forEach(function(poi, idx) {
+        // 加上到达此站点的步行时间
+        if (idx > 0 && segments[idx - 1]) {
+          currentTimeMin += (segments[idx - 1].duration_min || 10);
+        }
+
+        // 如果是用餐站点，添加用餐时间
+        if (poi._is_meal_stop) {
+          var mealDuration = poi._meal_time || 45; // 默认 45 分钟
+          var mealStartMin = currentTimeMin;
+
+          // 计算距现在的毫秒数（模拟加速：1分钟真实时间 = 10分钟行程时间）
+          var nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+          var delayMin = mealStartMin - nowMin;
+
+          // 只在用餐时间前后 30 分钟内提醒
+          if (delayMin >= -30 && delayMin <= 60) {
+            var delayMs = Math.max(5000, delayMin * 60 * 1000); // 至少 5 秒
+            var timerId = setTimeout(function(name) {
+              return function() {
+                var context = { poiName: name };
+                _callProactiveAPI(context, 'meal_time', function(reply, mood) {
+                  showXiaociBubble(
+                    reply || '快到用餐时间啦！下一站「' + name + '」的招牌菜可是一绝哦！',
+                    mood || 'hungry',
+                    7000
+                  );
+                });
+                // 同时亮起聊天面板未读点
+                var dot = document.getElementById('chatUnreadDot');
+                if (dot) dot.classList.add('active');
+              };
+            }(poi.name), delayMs);
+            window.__mealTimers.push(timerId);
+          }
+
+          currentTimeMin += mealDuration;
+        }
+      });
+    }
+
+    /**
+     * 空闲智能建议（30 秒无操作触发）
+     */
+    function initIdleDetection() {
+      stopIdleDetection();
+
+      window.__idleLastActivity = Date.now();
+      var events = ['mousemove', 'click', 'scroll', 'keydown', 'touchstart'];
+
+      function _onActivity() {
+        window.__idleLastActivity = Date.now();
+      }
+      events.forEach(function(evt) {
+        document.addEventListener(evt, _onActivity, { passive: true });
+      });
+      window.__idleEventHandlers = _onActivity;
+
+      // 每 15 秒检查一次
+      window.__idleTimer = setInterval(function() {
+        var elapsed = Date.now() - window.__idleLastActivity;
+        if (elapsed >= 30000) { // 30 秒无操作
+          var context = {};
+          _callProactiveAPI(context, 'idle', function(reply, mood) {
+            showXiaociBubble(
+              reply || _localTip('idle', context),
+              mood || 'sleepy',
+              5000
+            );
+          });
+          // 重置计时避免频繁触发
+          window.__idleLastActivity = Date.now();
+        }
+      }, 15000);
+    }
+
+    /**
+     * 停止空闲检测
+     */
+    function stopIdleDetection() {
+      if (window.__idleTimer) {
+        clearInterval(window.__idleTimer);
+        window.__idleTimer = null;
+      }
+      if (window.__idleEventHandlers) {
+        var events = ['mousemove', 'click', 'scroll', 'keydown', 'touchstart'];
+        events.forEach(function(evt) {
+          document.removeEventListener(evt, window.__idleEventHandlers);
+        });
+        window.__idleEventHandlers = null;
+      }
+    }
+
+    /**
+     * 清理用餐提醒定时器
+     */
+    function cleanupMealTimers() {
+      if (window.__mealTimers) {
+        window.__mealTimers.forEach(function(id) { clearTimeout(id); });
+        window.__mealTimers = [];
+      }
+    }
+
+    /**
+     * 清理所有主动行为定时器（在 backToPlanner 中调用）
+     */
+    function cleanupProactiveTimers() {
+      cleanupMealTimers();
+      stopIdleDetection();
+      if (window.__bubbleHideTimer) {
+        clearTimeout(window.__bubbleHideTimer);
+        window.__bubbleHideTimer = null;
+      }
+    }
+
     // 登录成功后初始化聊天会话（hook into handleLogin）
     (function() {
       var _origLogin = window.handleLogin;
@@ -2795,6 +3442,181 @@
         return result;
       };
     })();
+  </script>
+
+  <!-- === Phase 2: 旅行手账模态框 === -->
+  <div class="journal-modal-overlay" id="journalModalOverlay" onclick="if(event.target===this)closeJournalModal()">
+    <div class="journal-modal">
+      <div class="journal-modal-header">
+        <h3>旅行手账预览</h3>
+        <div class="journal-modal-actions">
+          <button class="journal-export-btn" id="journalExportBtn" onclick="exportJournalPNG()">导出 PNG</button>
+          <button class="journal-close-btn" onclick="closeJournalModal()">关闭</button>
+        </div>
+      </div>
+      <div class="journal-modal-body" id="journalModalBody">
+        <div class="journal-loading" id="journalLoading">
+          <div class="spinner"></div>
+          <span>正在生成旅行手账...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // ============================================================
+  // Phase 2: 旅行手账前端集成
+  // ============================================================
+
+  window.__journalIframe = null;
+  window.__journalBlobUrl = null;
+
+  /**
+   * 打开手账模态框
+   */
+  function openJournalModal() {
+    var mapData = window.__CURRENT_MAP_DATA__;
+    if (!mapData || !mapData.pois || mapData.pois.length === 0) {
+      alert('请先完成路线规划，才能生成旅行手账哦！');
+      return;
+    }
+
+    var overlay = document.getElementById('journalModalOverlay');
+    var body = document.getElementById('journalModalBody');
+    var loading = document.getElementById('journalLoading');
+    var exportBtn = document.getElementById('journalExportBtn');
+
+    overlay.classList.add('active');
+    body.innerHTML = '';
+    body.appendChild(loading);
+    loading.style.display = '';
+    exportBtn.disabled = true;
+
+    // 获取模板并注入数据
+    fetch('/templates/travel-journal.html')
+      .then(function(r) {
+        if (!r.ok) throw new Error('模板加载失败');
+        return r.text();
+      })
+      .then(function(templateHtml) {
+        // 注入数据到模板
+        var journalData = {
+          pois: mapData.pois || [],
+          segments: mapData.segments || [],
+          narrations: mapData.narrations || [],
+          city: mapData.city || '',
+          scenic_name: mapData.scenic_name || '',
+          city_welcome: mapData.city_welcome || '',
+          food_summary: mapData.food_summary || '',
+          total_duration_min: mapData.total_duration_min || 0,
+          total_walking_min: mapData.total_walking_min || 0,
+          date: new Date().toLocaleDateString('zh-CN'),
+        };
+
+        var dataJson = JSON.stringify(journalData)
+          .replace(/</g, '\\u003c')
+          .replace(/-->/g, '\\u002d\\u002d\\u003e');
+
+        var finalHtml = templateHtml.replace(
+          /var __JOURNAL_DATA__ = \{\};/,
+          'window.__JOURNAL_DATA__ = ' + dataJson + ';'
+        );
+
+        // 创建 Blob URL 用于 iframe
+        if (window.__journalBlobUrl) {
+          URL.revokeObjectURL(window.__journalBlobUrl);
+        }
+        var blob = new Blob([finalHtml], { type: 'text/html; charset=utf-8' });
+        window.__journalBlobUrl = URL.createObjectURL(blob);
+
+        // 创建 iframe 预览
+        var iframe = document.createElement('iframe');
+        iframe.sandbox = 'allow-scripts allow-same-origin';
+        iframe.src = window.__journalBlobUrl;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+
+        body.innerHTML = '';
+        body.appendChild(iframe);
+        window.__journalIframe = iframe;
+
+        // iframe 加载完成后启用导出按钮
+        iframe.onload = function() {
+          loading.style.display = 'none';
+          exportBtn.disabled = false;
+        };
+      })
+      .catch(function(err) {
+        loading.innerHTML = '<span style="color:#e17055;">加载失败: ' + (err.message || '请重试') + '</span>';
+        console.error('[手账] 模板加载失败:', err);
+      });
+  }
+
+  /**
+   * 关闭手账模态框
+   */
+  function closeJournalModal() {
+    var overlay = document.getElementById('journalModalOverlay');
+    if (overlay) overlay.classList.remove('active');
+
+    // 清理 Blob URL
+    if (window.__journalBlobUrl) {
+      URL.revokeObjectURL(window.__journalBlobUrl);
+      window.__journalBlobUrl = null;
+    }
+    window.__journalIframe = null;
+  }
+
+  /**
+   * 导出旅行手账为 PNG
+   */
+  function exportJournalPNG() {
+    var iframe = window.__journalIframe;
+    if (!iframe || !iframe.contentDocument) {
+      alert('手账尚未加载完成，请稍候再试');
+      return;
+    }
+
+    var exportBtn = document.getElementById('journalExportBtn');
+    exportBtn.disabled = true;
+    exportBtn.textContent = '生成中...';
+
+    var target = iframe.contentDocument.getElementById('journalContent') || iframe.contentDocument.body;
+
+    if (typeof html2canvas === 'undefined') {
+      alert('html2canvas 库未加载，无法导出 PNG');
+      exportBtn.disabled = false;
+      exportBtn.textContent = '导出 PNG';
+      return;
+    }
+
+    html2canvas(target, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#faf6f0',
+      width: 680,
+      windowWidth: 680,
+    })
+    .then(function(canvas) {
+      var link = document.createElement('a');
+      var mapData = window.__CURRENT_MAP_DATA__ || {};
+      var city = mapData.city || '旅行';
+      link.download = city + '-旅行手账-' + new Date().toISOString().slice(0,10) + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+
+      exportBtn.disabled = false;
+      exportBtn.textContent = '导出 PNG';
+    })
+    .catch(function(err) {
+      console.error('[手账] PNG 导出失败:', err);
+      alert('导出失败: ' + (err.message || '请重试'));
+      exportBtn.disabled = false;
+      exportBtn.textContent = '导出 PNG';
+    });
+  }
   </script>
 </body>
 </html>

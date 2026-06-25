@@ -66,7 +66,7 @@ const AROUND_TYPES_DRINK = '咖啡厅|茶艺馆|甜品';
 const AROUND_TYPES_PARKING = '停车场';
 
 /** 应用名称，所有 API 请求都会带上 */
-const APP_NAME = 'smart-tourism-planner';
+const APP_NAME = 'gaode-map-lbs';
 
 /**
  * POI 类型 → 建议游览时长映射（分钟）
