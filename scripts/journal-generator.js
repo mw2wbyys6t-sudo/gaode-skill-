@@ -85,19 +85,57 @@ function generateJournal(mapData, outputPath, options) {
   const opts = options || {};
   const html = readTemplate();
 
-  // 构建注入数据
-  const journalData = {
-    pois: mapData.pois || [],
-    segments: mapData.segments || [],
-    narrations: mapData.narrations || [],
-    city: mapData.city || '',
-    scenic_name: mapData.scenic_name || '',
-    city_welcome: mapData.city_welcome || '',
-    food_summary: mapData.food_summary || '',
-    total_duration_min: mapData.total_duration_min || 0,
-    total_walking_min: mapData.total_walking_min || 0,
-    date: opts.date || new Date().toLocaleDateString('zh-CN'),
-  };
+  let journalData;
+
+  // 多城市多日手账数据
+  if (mapData.is_multi_city && Array.isArray(mapData.days) && mapData.days.length > 1) {
+    const cities = [];
+    mapData.days.forEach(d => {
+      if (d.city && !cities.includes(d.city)) cities.push(d.city);
+    });
+
+    journalData = {
+      is_multi_day: true,
+      total_days: mapData.days.length,
+      cities: cities,
+      city: cities.join('·'),
+      scenic_name: cities.join(' → ') + ' ' + mapData.days.length + '日游',
+      total_duration_min: mapData.total_duration_min || 0,
+      total_walking_min: mapData.total_walking_min || 0,
+      total_inter_city_min: mapData.total_inter_city_min || 0,
+      inter_city_segments: mapData.inter_city_segments || [],
+      days: mapData.days.map((d, i) => {
+        const md = d.mapData || {};
+        return {
+          day: i + 1,
+          city: d.city || '',
+          scenic_name: d.scenic_name || '',
+          pois: md.pois || [],
+          segments: md.segments || [],
+          narrations: md.narrations || [],
+          city_welcome: md.city_welcome || '',
+          food_summary: md.food_summary || '',
+          total_duration_min: md.total_duration_min || 0,
+          total_walking_min: md.total_walking_min || 0,
+        };
+      }),
+      date: opts.date || new Date().toLocaleDateString('zh-CN'),
+    };
+  } else {
+    // 单城市手账数据（原有逻辑）
+    journalData = {
+      pois: mapData.pois || [],
+      segments: mapData.segments || [],
+      narrations: mapData.narrations || [],
+      city: mapData.city || '',
+      scenic_name: mapData.scenic_name || '',
+      city_welcome: mapData.city_welcome || '',
+      food_summary: mapData.food_summary || '',
+      total_duration_min: mapData.total_duration_min || 0,
+      total_walking_min: mapData.total_walking_min || 0,
+      date: opts.date || new Date().toLocaleDateString('zh-CN'),
+    };
+  }
 
   // 替换数据占位符
   const dataJson = safeStringify(journalData);

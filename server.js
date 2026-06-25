@@ -43,6 +43,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// --- favicon 兜底（避免浏览器自动请求 404） ---
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // --- 静态文件服务 ---
 app.use(express.static(__dirname));
 app.use(express.json({ limit: '1mb' }));
@@ -78,6 +81,30 @@ app.get('/api/plan', async (req, res) => {
       skipMap: true,
     });
 
+    // 多城市多日响应
+    if (summary.is_multi_city && summary.days) {
+      return res.json({
+        success: true,
+        is_multi_city: true,
+        total_days: summary.total_days,
+        days: summary.days,
+        inter_city_segments: summary.inter_city_segments || [],
+        scenic_name: summary.scenic_name,
+        city: summary.city,
+        poi_count: summary.poi_count,
+        scenic_count: summary.scenic_count || 0,
+        food_count: summary.food_count || 0,
+        total_duration: summary.total_duration,
+        total_duration_min: summary.total_duration_min || 0,
+        total_walking_min: summary.total_walking_min || 0,
+        total_inter_city_min: summary.total_inter_city_min || 0,
+        narrations: summary.narrations || [],
+        amapKey: sharedConfig.amapJsapiKey || '',
+        amapSecurityCode: sharedConfig.amapSecurityJsCode || '',
+      });
+    }
+
+    // 单城市响应（保持原有结构）
     res.json({
       success: true,
       scenic_name: summary.scenic_name,

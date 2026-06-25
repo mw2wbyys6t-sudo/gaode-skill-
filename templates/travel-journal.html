@@ -459,16 +459,7 @@
     // ============================================================
     (function() {
       var data = window.__JOURNAL_DATA__ || __JOURNAL_DATA__;
-      if (!data || !data.pois || data.pois.length === 0) return;
-
-      var pois = data.pois || [];
-      var segments = data.segments || [];
-      var narrations = data.narrations || [];
-      var city = data.city || '';
-      var scenicName = data.scenic_name || '';
-      var cityWelcome = data.city_welcome || '';
-      var foodSummary = data.food_summary || '';
-      var date = data.date || new Date().toLocaleDateString('zh-CN');
+      if (!data) return;
 
       // 季节
       var month = new Date().getMonth() + 1;
@@ -478,131 +469,343 @@
       else if (month === 12 || month <= 2) seasonClass = 'season-winter';
       document.querySelector('.journal').classList.add(seasonClass);
 
-      // 城市贴纸
+      // 城市贴纸映射
       var stickers = {
         '\u676D\u5DDE':'\uD83E\uDEB7','\u897F\u6E56':'\uD83E\uDEB7','\u5317\u4EAC':'\uD83C\uDFF0','\u6545\u5BAB':'\uD83C\uDFF0',
         '\u6210\u90FD':'\uD83D\uDC3C','\u897F\u5B89':'\uD83D\uDDFF','\u4E0A\u6D77':'\uD83C\uDF03','\u91CD\u5E86':'\uD83C\uDF36\uFE0F',
         '\u5E7F\u5DDE':'\uD83E\uDD5F','\u957F\u6C99':'\uD83C\uDF36\uFE0F','\u5357\u4EAC':'\uD83C\uDF42','\u82CF\u5DDE':'\uD83C\uDFEE',
         '\u53A6\u95E8':'\uD83C\uDFD6\uFE0F','\u9752\u5C9B':'\uD83C\uDF7A','\u5927\u7406':'\uD83C\uDFD4\uFE0F','\u4E3D\u6C5F':'\uD83C\uDFD4\uFE0F'
       };
-      var sticker = stickers[city] || stickers[scenicName] || '\u2728';
-      var el1 = document.getElementById('stickerTopRight');
-      var el2 = document.getElementById('stickerBottomLeft');
-      if (el1) el1.textContent = sticker;
-      if (el2) el2.textContent = sticker;
 
-      // 封面
-      document.getElementById('journalCity').textContent = city || '\u65C5\u884C\u624B\u8D26';
-      document.getElementById('journalSubtitle').textContent = scenicName || 'Travel Journal';
-      document.getElementById('journalDate').textContent = date;
-      var heroImg = document.getElementById('heroImg');
-      var firstPhoto = null;
-      for (var i = 0; i < pois.length; i++) {
-        if (pois[i].photos && pois[i].photos.length > 0 && pois[i].photos[0].url) {
-          firstPhoto = pois[i].photos[0].url;
-          break;
+      // ============================================================
+      // 多城市多日渲染
+      // ============================================================
+      if (data.is_multi_day && data.days && data.days.length > 1) {
+        renderMultiDayJournal(data, stickers);
+        return;
+      }
+
+      // ============================================================
+      // 单城市渲染（原有逻辑）
+      // ============================================================
+      if (!data.pois || data.pois.length === 0) return;
+      renderSingleDayJournal(data, stickers);
+
+      // --------------------------------------------------------
+      // 单城市渲染函数
+      // --------------------------------------------------------
+      function renderSingleDayJournal(data, stickers) {
+        var pois = data.pois || [];
+        var segments = data.segments || [];
+        var narrations = data.narrations || [];
+        var city = data.city || '';
+        var scenicName = data.scenic_name || '';
+        var cityWelcome = data.city_welcome || '';
+        var foodSummary = data.food_summary || '';
+        var date = data.date || new Date().toLocaleDateString('zh-CN');
+
+        // 城市贴纸
+        var sticker = stickers[city] || stickers[scenicName] || '\u2728';
+        var el1 = document.getElementById('stickerTopRight');
+        var el2 = document.getElementById('stickerBottomLeft');
+        if (el1) el1.textContent = sticker;
+        if (el2) el2.textContent = sticker;
+
+        // 封面
+        document.getElementById('journalCity').textContent = city || '\u65C5\u884C\u624B\u8D26';
+        document.getElementById('journalSubtitle').textContent = scenicName || 'Travel Journal';
+        document.getElementById('journalDate').textContent = date;
+        var heroImg = document.getElementById('heroImg');
+        var firstPhoto = findFirstPhoto(pois);
+        if (firstPhoto) {
+          heroImg.innerHTML = '<img src="' + firstPhoto + '" alt="hero" crossorigin="anonymous">';
+        } else {
+          heroImg.innerHTML = '\uD83D\uDDFA\uFE0F';
         }
-      }
-      if (firstPhoto) {
-        heroImg.innerHTML = '<img src="' + firstPhoto + '" alt="hero" crossorigin="anonymous">';
-      } else {
-        heroImg.innerHTML = '\uD83D\uDDFA\uFE0F';
-      }
-      document.getElementById('heroCaption').textContent = scenicName ? scenicName + ' \u00B7 ' + city : city;
+        document.getElementById('heroCaption').textContent = scenicName ? scenicName + ' \u00B7 ' + city : city;
 
-      // 统计
-      var scenicPois = pois.filter(function(p) { return p._category !== 'food' && p._category !== 'drink'; });
-      var foodPois = pois.filter(function(p) { return p._category === 'food' || p._category === 'drink'; });
-      var totalMin = data.total_duration_min || 0;
-      var walkMin = data.total_walking_min || 0;
-      var durStr = totalMin >= 60 ? Math.floor(totalMin/60) + 'h' + (totalMin%60>0 ? totalMin%60 + 'm' : '') : totalMin + 'min';
-      var walkStr = walkMin >= 60 ? Math.floor(walkMin/60) + 'h' + (walkMin%60>0 ? walkMin%60 + 'm' : '') : walkMin + 'min';
-      document.getElementById('journeyStats').innerHTML =
-        '<div class="stat-badge"><span class="stat-num">' + pois.length + '</span><span class="stat-label">\u4E2A\u7AD9\u70B9</span></div>' +
-        '<div class="stat-badge"><span class="stat-num">' + scenicPois.length + '</span><span class="stat-label">\u666F\u70B9</span></div>' +
-        '<div class="stat-badge"><span class="stat-num">' + foodPois.length + '</span><span class="stat-label">\u7F8E\u98DF</span></div>' +
-        '<div class="stat-badge"><span class="stat-num">' + durStr + '</span><span class="stat-label">\u603B\u65F6\u957F</span></div>' +
-        '<div class="stat-badge"><span class="stat-num">' + walkStr + '</span><span class="stat-label">\u6B65\u884C</span></div>';
+        // 统计
+        var scenicPois = pois.filter(function(p) { return p._category !== 'food' && p._category !== 'drink'; });
+        var foodPois = pois.filter(function(p) { return p._category === 'food' || p._category === 'drink'; });
+        var totalMin = data.total_duration_min || 0;
+        var walkMin = data.total_walking_min || 0;
+        var durStr = fmtDur(totalMin);
+        var walkStr = fmtDur(walkMin);
+        document.getElementById('journeyStats').innerHTML =
+          statBadge(pois.length, '\u4E2A\u7AD9\u70B9') +
+          statBadge(scenicPois.length, '\u666F\u70B9') +
+          statBadge(foodPois.length, '\u7F8E\u98DF') +
+          statBadge(durStr, '\u603B\u65F6\u957F') +
+          statBadge(walkStr, '\u6B65\u884C');
 
-      // 时间轴
-      var tl = '';
-      pois.forEach(function(poi, idx) {
-        var isMeal = poi._category === 'food' || poi._category === 'drink';
-        var walkInfo = '';
-        if (idx > 0 && segments[idx-1]) {
-          walkInfo = '<span class="tl-walk">\uD83D\uDEB6 ' + (segments[idx-1].duration_min || segments[idx-1].walking_min || '?') + 'min</span>';
+        // 时间轴
+        document.getElementById('journeyTimeline').innerHTML = buildTimeline(pois, segments);
+
+        // 景点拍立得
+        document.getElementById('scenicGrid').innerHTML = buildPolaroids(scenicPois);
+
+        // 美食
+        var fc = buildFoodCards(foodPois);
+        if (foodSummary) {
+          fc += '<div class="diary-entry" style="margin-top:12px;"><span class="diary-label">Food Summary</span>' + foodSummary + '</div>';
         }
-        var durInfo = poi.duration_min ? '<span>\u23F1 ' + poi.duration_min + 'min</span>' : '';
-        tl += '<div class="timeline-item' + (isMeal ? ' meal' : '') + '"><div class="tl-header">' +
-          '<span class="tl-number">' + (idx+1) + '</span><span class="tl-name">' + (poi.name || '') + '</span></div>' +
-          '<div class="tl-meta">' + walkInfo + durInfo + '</div></div>';
-      });
-      document.getElementById('journeyTimeline').innerHTML = tl;
+        document.getElementById('foodCards').innerHTML = fc;
+        if (foodPois.length === 0) document.getElementById('foodSection').style.display = 'none';
 
-      // 景点拍立得
-      var sg = '';
-      scenicPois.forEach(function(poi) {
-        var photo = '';
-        if (poi.photos && poi.photos.length > 0 && poi.photos[0].url) {
-          photo = '<img src="' + poi.photos[0].url + '" alt="' + (poi.name||'') + '" crossorigin="anonymous">';
-        } else { photo = '\uD83C\uDFDB\uFE0F'; }
-        var stars = '';
-        if (poi.rating) { for (var s=0; s<Math.min(5,Math.round(poi.rating)); s++) stars += '\u2605'; }
-        var desc = poi.description || '';
-        if (desc.length > 30) desc = desc.substring(0,27) + '...';
-        sg += '<div class="polaroid"><div class="photo scenic">' + photo + '</div><div class="caption">' +
-          '<div class="poi-name">' + (poi.name||'') + '</div>' +
-          (desc ? '<div class="poi-desc">' + desc + '</div>' : '') +
-          (stars ? '<div class="poi-stars">' + stars + '</div>' : '') +
-          (poi.duration_min ? '<div class="poi-duration">' + poi.duration_min + ' min</div>' : '') +
-          '</div></div>';
-      });
-      document.getElementById('scenicGrid').innerHTML = sg;
+        // 语音日记
+        var de = '';
+        if (cityWelcome) de += '<div class="diary-entry"><span class="diary-label">City Welcome</span>' + cityWelcome + '</div>';
+        narrations.forEach(function(text, i) {
+          if (text && text.trim()) de += '<div class="diary-entry"><span class="diary-label">Stop ' + (i+1) + '</span>' + text + '</div>';
+        });
+        document.getElementById('diaryEntries').innerHTML = de;
+        if (!de) document.getElementById('narrationSection').style.display = 'none';
 
-      // 美食
-      var fc = '';
-      foodPois.forEach(function(poi) {
-        var tags = [];
-        if (poi._cuisine_type) tags.push(poi._cuisine_type);
-        if (poi._category === 'drink') tags.push('\u996E\u54C1');
-        if (poi.tags && poi.tags.length) tags = tags.concat(poi.tags.slice(0,2));
-        var tagsHtml = tags.map(function(t){return '<span class="food-tag">'+t+'</span>';}).join('');
-        var costHtml = poi._avg_cost ? '<span class="food-cost">\u4EBA\u5747 \u00A5' + poi._avg_cost + '</span>' : '';
-        var desc = poi.description || '';
-        if (desc.length > 50) desc = desc.substring(0,47) + '...';
-        fc += '<div class="food-card"><div class="food-name">' + (poi.name||'') + '</div>' +
-          (tagsHtml ? '<div class="food-tags">' + tagsHtml + '</div>' : '') +
-          costHtml + (desc ? '<div class="food-desc">' + desc + '</div>' : '') + '</div>';
-      });
-      if (foodSummary) {
-        fc += '<div class="diary-entry" style="margin-top:12px;"><span class="diary-label">Food Summary</span>' + foodSummary + '</div>';
+        // 成就徽章
+        document.getElementById('achievements').innerHTML = buildAchievements(pois, scenicPois, foodPois, totalMin, walkMin);
       }
-      document.getElementById('foodCards').innerHTML = fc;
-      if (foodPois.length === 0) document.getElementById('foodSection').style.display = 'none';
 
-      // 语音日记
-      var de = '';
-      if (cityWelcome) de += '<div class="diary-entry"><span class="diary-label">City Welcome</span>' + cityWelcome + '</div>';
-      narrations.forEach(function(text, i) {
-        if (text && text.trim()) de += '<div class="diary-entry"><span class="diary-label">Stop ' + (i+1) + '</span>' + text + '</div>';
-      });
-      document.getElementById('diaryEntries').innerHTML = de;
-      if (!de) document.getElementById('narrationSection').style.display = 'none';
+      // --------------------------------------------------------
+      // 多城市多日渲染函数
+      // --------------------------------------------------------
+      function renderMultiDayJournal(data, stickers) {
+        var days = data.days || [];
+        var interSegments = data.inter_city_segments || [];
+        var cities = data.cities || [];
+        var date = data.date || new Date().toLocaleDateString('zh-CN');
 
-      // 成就徽章
-      var badges = [];
-      if (pois.length >= 5) badges.push({icon:'\uD83D\uDCCD', text:'\u6253\u5361 ' + pois.length + ' \u4E2A\u7AD9\u70B9'});
-      if (scenicPois.length >= 3) badges.push({icon:'\uD83C\uDFDB\uFE0F', text:'\u63A2\u7D22 ' + scenicPois.length + ' \u4E2A\u666F\u70B9'});
-      if (foodPois.length >= 2) badges.push({icon:'\uD83C\uDF5C', text:'\u54C1\u5C1D ' + foodPois.length + ' \u5BB6\u7F8E\u98DF'});
-      var cuisines = {};
-      foodPois.forEach(function(p){if(p._cuisine_type) cuisines[p._cuisine_type]=true;});
-      var cc = Object.keys(cuisines).length;
-      if (cc >= 2) badges.push({icon:'\uD83C\uDF0D', text:'\u6A2A\u8DE8 ' + cc + ' \u79CD\u83DC\u7CFB'});
-      if (walkMin >= 60) badges.push({icon:'\uD83D\uDEB6', text:'\u6B65\u884C ' + (Math.round(walkMin/10)/10) + ' \u516C\u91CC'});
-      if (totalMin >= 480) badges.push({icon:'\u23F0', text:'\u5145\u5B9E\u7684 8 \u5C0F\u65F6\u884C\u7A0B'});
-      document.getElementById('achievements').innerHTML = badges.map(function(b){
-        return '<div class="achievement"><span class="badge-icon">' + b.icon + '</span>' + b.text + '</div>';
-      }).join('');
+        // 城市贴纸（用第一个城市）
+        var sticker = stickers[cities[0]] || '\u2728';
+        var el1 = document.getElementById('stickerTopRight');
+        var el2 = document.getElementById('stickerBottomLeft');
+        if (el1) el1.textContent = sticker;
+        if (el2) el2.textContent = sticker;
+
+        // 封面
+        document.getElementById('journalCity').textContent = cities.join(' \u00B7 ') || '\u591A\u57CE\u65C5\u884C';
+        document.getElementById('journalSubtitle').textContent = data.total_days + '\u65E5\u6E38 \u00B7 ' + cities.join(' \u2192 ');
+        document.getElementById('journalDate').textContent = date;
+
+        // 封面图：用第一天第一张图
+        var heroImg = document.getElementById('heroImg');
+        var allPois = [];
+        days.forEach(function(d) { allPois = allPois.concat(d.pois || []); });
+        var firstPhoto = findFirstPhoto(allPois);
+        if (firstPhoto) {
+          heroImg.innerHTML = '<img src="' + firstPhoto + '" alt="hero" crossorigin="anonymous">';
+        } else {
+          heroImg.innerHTML = '\uD83D\uDDFA\uFE0F';
+        }
+        document.getElementById('heroCaption').textContent = cities.join(' \u2192 ') + ' \u00B7 ' + data.total_days + '\u5929';
+
+        // 全程统计
+        var totalPois = 0, totalScenic = 0, totalFood = 0;
+        days.forEach(function(d) {
+          var dp = d.pois || [];
+          totalPois += dp.length;
+          dp.forEach(function(p) {
+            if (p._category === 'food' || p._category === 'drink') totalFood++;
+            else totalScenic++;
+          });
+        });
+        var totalMin = data.total_duration_min || 0;
+        var walkMin = data.total_walking_min || 0;
+        var interMin = data.total_inter_city_min || 0;
+
+        var statsHtml =
+          statBadge(data.total_days + '\u5929', '\u884C\u7A0B') +
+          statBadge(totalPois, '\u4E2A\u7AD9\u70B9') +
+          statBadge(totalScenic, '\u666F\u70B9') +
+          statBadge(totalFood, '\u7F8E\u98DF') +
+          statBadge(fmtDur(totalMin), '\u603B\u65F6\u957F') +
+          statBadge(fmtDur(walkMin), '\u6B65\u884C');
+        if (interMin > 0) statsHtml += statBadge(fmtDur(interMin), '\u57CE\u9645\u4EA4\u901A');
+        document.getElementById('journeyStats').innerHTML = statsHtml;
+
+        // 按天渲染时间轴
+        var tlHtml = '';
+        days.forEach(function(day, di) {
+          var dp = day.pois || [];
+          var ds = day.segments || [];
+          // 日期标题
+          tlHtml += '<div style="margin:20px 0 10px;padding:8px 14px;background:linear-gradient(135deg,rgba(232,168,124,0.15),rgba(133,193,233,0.15));border-radius:10px;border:1px dashed rgba(200,180,160,0.3);">' +
+            '<span style="font-family:var(--font-en);font-size:22px;font-weight:700;color:var(--accent-warm);">Day ' + (di+1) + '</span>' +
+            '<span style="font-family:var(--font-hand);font-size:16px;color:var(--ink-color);margin-left:10px;">' + (day.city || '') + ' \u00B7 ' + (day.scenic_name || '') + '</span>' +
+            '<span style="font-size:13px;color:#a09080;margin-left:10px;">\u23F1 ' + fmtDur(day.total_duration_min || 0) + '</span>' +
+            '</div>';
+          // 该天时间轴
+          tlHtml += buildTimeline(dp, ds);
+          // 跨城交通卡
+          if (di < days.length - 1) {
+            var seg = interSegments.find(function(s) { return s.from_day === di + 1; });
+            if (seg) {
+              tlHtml += '<div style="margin:16px 0;padding:12px 18px;background:linear-gradient(135deg,#e6f7ff,#bae7ff);border-radius:12px;text-align:center;border:1px solid rgba(22,119,255,0.15);">' +
+                '<span style="font-size:22px;">\uD83D\uDE84</span> ' +
+                '<span style="font-family:var(--font-hand);font-size:16px;color:#0958d9;">' + (seg.from_city || '') + ' \u2192 ' + (seg.to_city || '') + '</span>' +
+                '<span style="font-family:var(--font-en);font-size:14px;color:#4096ff;margin-left:10px;">\u2248 ' + (seg.estimated_min || 90) + ' min</span>' +
+                '</div>';
+            }
+          }
+        });
+        document.getElementById('journeyTimeline').innerHTML = tlHtml;
+
+        // 按天渲染景点拍立得
+        var sgHtml = '';
+        days.forEach(function(day, di) {
+          var dp = day.pois || [];
+          var scenic = dp.filter(function(p) { return p._category !== 'food' && p._category !== 'drink'; });
+          if (scenic.length === 0) return;
+          sgHtml += '<div style="width:100%;margin:16px 0 8px;font-family:var(--font-hand);font-size:16px;color:var(--ink-color);border-bottom:1px dashed rgba(200,180,160,0.3);padding-bottom:6px;">' +
+            '\uD83D\uDCC5 Day ' + (di+1) + ' \u00B7 ' + (day.city || '') + '</div>';
+          sgHtml += buildPolaroids(scenic);
+        });
+        document.getElementById('scenicGrid').innerHTML = sgHtml;
+
+        // 按天渲染美食
+        var fcHtml = '';
+        var anyFood = false;
+        days.forEach(function(day, di) {
+          var dp = day.pois || [];
+          var food = dp.filter(function(p) { return p._category === 'food' || p._category === 'drink'; });
+          if (food.length === 0 && !day.food_summary) return;
+          anyFood = true;
+          fcHtml += '<div style="width:100%;margin:16px 0 8px;font-family:var(--font-hand);font-size:16px;color:var(--ink-color);border-bottom:1px dashed rgba(200,180,160,0.3);padding-bottom:6px;">' +
+            '\uD83C\uDF5C Day ' + (di+1) + ' \u00B7 ' + (day.city || '') + '</div>';
+          fcHtml += buildFoodCards(food);
+          if (day.food_summary) {
+            fcHtml += '<div class="diary-entry" style="margin-top:8px;"><span class="diary-label">' + (day.city || '') + ' Food Guide</span>' + day.food_summary + '</div>';
+          }
+        });
+        document.getElementById('foodCards').innerHTML = fcHtml;
+        if (!anyFood) document.getElementById('foodSection').style.display = 'none';
+
+        // 语音日记（按天合并）
+        var deHtml = '';
+        days.forEach(function(day, di) {
+          if (day.city_welcome) {
+            deHtml += '<div class="diary-entry"><span class="diary-label">Day ' + (di+1) + ' \u00B7 ' + (day.city || '') + '</span>' + day.city_welcome + '</div>';
+          }
+          (day.narrations || []).forEach(function(text, ni) {
+            if (text && text.trim()) {
+              deHtml += '<div class="diary-entry"><span class="diary-label">Day ' + (di+1) + ' Stop ' + (ni+1) + '</span>' + text + '</div>';
+            }
+          });
+        });
+        document.getElementById('diaryEntries').innerHTML = deHtml;
+        if (!deHtml) document.getElementById('narrationSection').style.display = 'none';
+
+        // 全程成就
+        var allScenic = [], allFood = [];
+        days.forEach(function(d) {
+          (d.pois || []).forEach(function(p) {
+            if (p._category === 'food' || p._category === 'drink') allFood.push(p);
+            else allScenic.push(p);
+          });
+        });
+        var achievementsHtml = buildAchievements(allPois, allScenic, allFood, totalMin, walkMin);
+        // 多城市专属成就
+        if (cities.length >= 2) {
+          achievementsHtml += '<div class="achievement"><span class="badge-icon">\uD83D\uDE84</span>\u6A2A\u8DE8 ' + cities.length + ' \u4E2A\u57CE\u5E02</div>';
+        }
+        if (data.total_days >= 3) {
+          achievementsHtml += '<div class="achievement"><span class="badge-icon">\uD83C\uDF1F</span>' + data.total_days + ' \u5929\u6DF1\u5EA6\u6E38</div>';
+        }
+        document.getElementById('achievements').innerHTML = achievementsHtml;
+      }
+
+      // --------------------------------------------------------
+      // 共用工具函数
+      // --------------------------------------------------------
+      function fmtDur(min) {
+        if (!min) return '0min';
+        return min >= 60
+          ? Math.floor(min/60) + 'h' + (min%60 > 0 ? min%60 + 'm' : '')
+          : min + 'min';
+      }
+
+      function statBadge(val, label) {
+        return '<div class="stat-badge"><span class="stat-num">' + val + '</span><span class="stat-label">' + label + '</span></div>';
+      }
+
+      function findFirstPhoto(pois) {
+        for (var i = 0; i < pois.length; i++) {
+          if (pois[i].photos && pois[i].photos.length > 0 && pois[i].photos[0].url) {
+            return pois[i].photos[0].url;
+          }
+        }
+        return null;
+      }
+
+      function buildTimeline(pois, segments) {
+        var html = '';
+        pois.forEach(function(poi, idx) {
+          var isMeal = poi._category === 'food' || poi._category === 'drink';
+          var walkInfo = '';
+          if (idx > 0 && segments[idx-1]) {
+            walkInfo = '<span class="tl-walk">\uD83D\uDEB6 ' + (segments[idx-1].duration_min || segments[idx-1].walking_min || '?') + 'min</span>';
+          }
+          var durInfo = poi.duration_min ? '<span>\u23F1 ' + poi.duration_min + 'min</span>' : '';
+          html += '<div class="timeline-item' + (isMeal ? ' meal' : '') + '"><div class="tl-header">' +
+            '<span class="tl-number">' + (idx+1) + '</span><span class="tl-name">' + (poi.name || '') + '</span></div>' +
+            '<div class="tl-meta">' + walkInfo + durInfo + '</div></div>';
+        });
+        return html;
+      }
+
+      function buildPolaroids(scenicPois) {
+        var html = '';
+        scenicPois.forEach(function(poi) {
+          var photo = '';
+          if (poi.photos && poi.photos.length > 0 && poi.photos[0].url) {
+            photo = '<img src="' + poi.photos[0].url + '" alt="' + (poi.name||'') + '" crossorigin="anonymous">';
+          } else { photo = '\uD83C\uDFDB\uFE0F'; }
+          var stars = '';
+          if (poi.rating) { for (var s=0; s<Math.min(5,Math.round(poi.rating)); s++) stars += '\u2605'; }
+          var desc = poi.description || '';
+          if (desc.length > 30) desc = desc.substring(0,27) + '...';
+          html += '<div class="polaroid"><div class="photo scenic">' + photo + '</div><div class="caption">' +
+            '<div class="poi-name">' + (poi.name||'') + '</div>' +
+            (desc ? '<div class="poi-desc">' + desc + '</div>' : '') +
+            (stars ? '<div class="poi-stars">' + stars + '</div>' : '') +
+            (poi.duration_min ? '<div class="poi-duration">' + poi.duration_min + ' min</div>' : '') +
+            '</div></div>';
+        });
+        return html;
+      }
+
+      function buildFoodCards(foodPois) {
+        var html = '';
+        foodPois.forEach(function(poi) {
+          var tags = [];
+          if (poi._cuisine_type) tags.push(poi._cuisine_type);
+          if (poi._category === 'drink') tags.push('\u996E\u54C1');
+          if (poi.tags && poi.tags.length) tags = tags.concat(poi.tags.slice(0,2));
+          var tagsHtml = tags.map(function(t){return '<span class="food-tag">'+t+'</span>';}).join('');
+          var costHtml = poi._avg_cost ? '<span class="food-cost">\u4EBA\u5747 \u00A5' + poi._avg_cost + '</span>' : '';
+          var desc = poi.description || '';
+          if (desc.length > 50) desc = desc.substring(0,47) + '...';
+          html += '<div class="food-card"><div class="food-name">' + (poi.name||'') + '</div>' +
+            (tagsHtml ? '<div class="food-tags">' + tagsHtml + '</div>' : '') +
+            costHtml + (desc ? '<div class="food-desc">' + desc + '</div>' : '') + '</div>';
+        });
+        return html;
+      }
+
+      function buildAchievements(pois, scenicPois, foodPois, totalMin, walkMin) {
+        var badges = [];
+        if (pois.length >= 5) badges.push({icon:'\uD83D\uDCCD', text:'\u6253\u5361 ' + pois.length + ' \u4E2A\u7AD9\u70B9'});
+        if (scenicPois.length >= 3) badges.push({icon:'\uD83C\uDFDB\uFE0F', text:'\u63A2\u7D22 ' + scenicPois.length + ' \u4E2A\u666F\u70B9'});
+        if (foodPois.length >= 2) badges.push({icon:'\uD83C\uDF5C', text:'\u54C1\u5C1D ' + foodPois.length + ' \u5BB6\u7F8E\u98DF'});
+        var cuisines = {};
+        foodPois.forEach(function(p){if(p._cuisine_type) cuisines[p._cuisine_type]=true;});
+        var cc = Object.keys(cuisines).length;
+        if (cc >= 2) badges.push({icon:'\uD83C\uDF0D', text:'\u6A2A\u8DE8 ' + cc + ' \u79CD\u83DC\u7CFB'});
+        if (walkMin >= 60) badges.push({icon:'\uD83D\uDEB6', text:'\u6B65\u884C ' + (Math.round(walkMin/10)/10) + ' \u516C\u91CC'});
+        if (totalMin >= 480) badges.push({icon:'\u23F0', text:'\u5145\u5B9E\u7684 8 \u5C0F\u65F6\u884C\u7A0B'});
+        return badges.map(function(b){
+          return '<div class="achievement"><span class="badge-icon">' + b.icon + '</span>' + b.text + '</div>';
+        }).join('');
+      }
     })();
   </script>
 </body>

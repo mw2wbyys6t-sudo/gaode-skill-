@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>次元旅人 - 启程</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌌</text></svg>">
   <style>
     /* ============================================================
        Reset & Base
@@ -589,6 +590,51 @@
     .map-mode-switcher .map-mode-btn:hover:not(.active) {
       background: rgba(139, 92, 246, 0.08); color: rgba(196,181,253,0.7);
     }
+
+    /* --- Multi-day tab switcher --- */
+    .day-tabs {
+      display: flex; gap: 4px; margin: 0 8px; flex-wrap: wrap;
+    }
+    .day-tab {
+      padding: 4px 14px; border-radius: 14px; font-size: 12px;
+      cursor: pointer; border: 1px solid rgba(22,119,255,0.3);
+      background: rgba(230,244,255,0.5); color: #1677ff;
+      transition: all 0.25s; white-space: nowrap;
+    }
+    .day-tab:hover:not(.active) {
+      background: rgba(22,119,255,0.1);
+    }
+    .day-tab.active {
+      background: #1677ff; color: #fff; border-color: #1677ff;
+      box-shadow: 0 2px 8px rgba(22,119,255,0.3);
+    }
+
+    /* --- Inter-city transition card in sidebar --- */
+    .inter-city-card {
+      padding: 14px 16px; margin: 12px 0;
+      background: linear-gradient(135deg, #e6f7ff, #bae7ff);
+      border-radius: 12px; text-align: center;
+      font-size: 13px; color: #0050b3;
+      border: 1px solid rgba(24,144,255,0.2);
+    }
+    .inter-city-card .transport-icon {
+      font-size: 20px; margin-bottom: 4px;
+    }
+    .inter-city-card .route-text {
+      font-weight: 600; font-size: 14px;
+    }
+    .inter-city-card .time-text {
+      font-size: 12px; color: #4096ff; margin-top: 2px;
+    }
+
+    /* --- Multi-day sidebar section header --- */
+    .day-section-header {
+      padding: 8px 12px; margin: 16px 0 8px;
+      background: linear-gradient(90deg, #e6f4ff, #f0f5ff);
+      border-radius: 10px; border-left: 4px solid #1677ff;
+      font-size: 14px; font-weight: 600; color: #1f1f1f;
+    }
+    .day-section-header:first-child { margin-top: 0; }
 
     /* --- Food card styles for sidebar --- */
     .food-card-indicator {
@@ -1510,6 +1556,8 @@
           <button class="map-mode-btn" onclick="filterMapView('food', this)">&#x1F35C; 美食</button>
           <button class="map-mode-btn" onclick="filterMapView('mixed', this)">&#x1F6B6;&#x200D;&#x2642;&#xFE0F;&#x1F35C; 逛吃</button>
         </div>
+        <!-- 多城市日期切换 Tab -->
+        <div class="day-tabs" id="dayTabs" style="display:none;"></div>
         <button class="journal-btn" onclick="openJournalModal()" title="生成旅行手账">&#x1F4D6; 旅行手账</button>
         <button class="map-back-btn" onclick="backToPlanner()">&#x2190; 重新规划</button>
       </div>
@@ -1775,6 +1823,12 @@
 
     // --- Show map result ---
     function showMapResult(data) {
+      // 多城市多日：走独立渲染逻辑
+      if (data.is_multi_city && data.days && data.days.length > 0) {
+        showMultiDayResult(data);
+        return;
+      }
+
       const welcomePanel = document.getElementById('welcomePanel');
       const mapResult = document.getElementById('mapResult');
       const resultInfo = document.getElementById('resultInfo');
@@ -1802,6 +1856,342 @@
 
       // Check TTS engine availability
       if (!voiceState.checked) checkTTSEngine();
+    }
+
+    // --- 多城市多日渲染 ---
+    var __multiDayData = null;    // 完整多城市响应数据
+    var __currentDayIdx = 0;      // 当前选中的日期索引
+
+    /**
+     * 多城市行程：生成日期 Tab，渲染第一天的地图
+     */
+    function showMultiDayResult(data) {
+      __multiDayData = data;
+      __currentDayIdx = 0;
+
+      var welcomePanel = document.getElementById('welcomePanel');
+      var mapResult = document.getElementById('mapResult');
+      var resultInfo = document.getElementById('resultInfo');
+      var dayTabs = document.getElementById('dayTabs');
+      var modeSwitcher = document.getElementById('mapModeSwitcher');
+
+      // 切换视图
+      welcomePanel.classList.add('hidden');
+      mapResult.classList.add('visible');
+
+      // 显示日期 Tab
+      dayTabs.style.display = 'flex';
+      dayTabs.innerHTML = '';
+      var days = data.days || [];
+      days.forEach(function(d, i) {
+        var tab = document.createElement('button');
+        tab.className = 'day-tab' + (i === 0 ? ' active' : '');
+        tab.textContent = 'Day ' + (i + 1) + ' ' + (d.city || '');
+        tab.title = '第' + (i + 1) + '天: ' + (d.city || '') + ' · ' + (d.scenic_name || '');
+        tab.onclick = function() { switchDay(i); };
+        dayTabs.appendChild(tab);
+      });
+
+      // 隐藏单城市的模式切换器（多城市模式下不需要）
+      if (modeSwitcher) modeSwitcher.style.display = 'none';
+
+      // 顶部统计信息（全程汇总）
+      var totalMin = data.total_duration_min || 0;
+      var walkMin = data.total_walking_min || 0;
+      var interMin = data.total_inter_city_min || 0;
+      var durStr = totalMin >= 60
+        ? Math.floor(totalMin / 60) + 'h' + (totalMin % 60 > 0 ? totalMin % 60 + 'm' : '')
+        : totalMin + 'min';
+
+      resultInfo.innerHTML =
+        '<span>\u{1F4CD} ' + escapeHTML(data.city || '') + ' \u00B7 ' + (data.total_days || days.length) + '天</span>' +
+        '<span>\u{1F3DB} ' + (data.scenic_count || data.poi_count || 0) + ' 个景点</span>' +
+        (data.food_count ? '<span>\u{1F35C} ' + data.food_count + ' 家美食</span>' : '') +
+        '<span>\u23F1 ' + (data.total_duration || durStr) + '</span>' +
+        '<span>\u{1F6B6} ' + walkMin + 'min</span>' +
+        (interMin > 0 ? '<span>\u{1F684} 城际 ' + interMin + 'min</span>' : '');
+
+      // 加载地图并渲染第一天
+      var firstDay = days[0];
+      if (firstDay && firstDay.mapData) {
+        loadAMapAndRender(firstDay.mapData, data.amapKey, data.amapSecurityCode);
+      }
+
+      // TTS 检测
+      if (!voiceState.checked) checkTTSEngine();
+    }
+
+    /**
+     * 切换日期 Tab：清除旧地图覆盖物，渲染新一天的数据
+     */
+    function switchDay(dayIdx) {
+      if (!__multiDayData || !__multiDayData.days) return;
+      var days = __multiDayData.days;
+      if (dayIdx < 0 || dayIdx >= days.length) return;
+      __currentDayIdx = dayIdx;
+
+      // 更新 Tab 高亮
+      var tabs = document.querySelectorAll('.day-tab');
+      tabs.forEach(function(t, i) {
+        t.classList.toggle('active', i === dayIdx);
+      });
+
+      // 清除旧标记和路线
+      var map = window.__mapInstance;
+      if (map) {
+        (window.__mapMarkers || []).forEach(function(m) { m.setMap(null); });
+        (window.__mapPolylines || []).forEach(function(p) { p.setMap(null); });
+        window.__mapMarkers = [];
+        window.__mapPolylines = [];
+      }
+
+      // 设置当前天的 mapData
+      var dayData = days[dayIdx];
+      window.__CURRENT_MAP_DATA__ = dayData.mapData;
+
+      // 重新渲染标记和路线
+      if (map && dayData.mapData) {
+        renderDayOnMap(map, dayData.mapData);
+      }
+
+      // 更新侧边栏（显示当前天的行程 + 跨城提示）
+      renderMultiDaySidebar();
+
+      // 触发小次主动提示
+      onMapLoadProactive(dayData.mapData);
+    }
+
+    /**
+     * 在已有地图上渲染某一天的标记和路线
+     */
+    function renderDayOnMap(map, mapData) {
+      var AMap = window.AMap;
+      if (!AMap || !map) return;
+
+      var pois = mapData.pois || [];
+      var segments = mapData.segments || [];
+      var infoWindow = window.__mapInfoWindow || new AMap.InfoWindow({
+        offset: new AMap.Pixel(0, -40),
+        closeWhenClickMap: true,
+        isCustom: false
+      });
+      window.__mapInfoWindow = infoWindow;
+
+      var markers = [];
+      pois.forEach(function(poi, idx) {
+        var markerEl = document.createElement('div');
+        markerEl.className = 'custom-marker';
+        markerEl.style.animationDelay = (idx * 0.1) + 's';
+
+        var category = poi._category || 'scenic';
+        var isMeal = poi._is_meal_stop;
+        var isFoodType = (category === 'food' || category === 'drink');
+
+        if (isFoodType) {
+          var icon = isMeal ? '\u{1F37D}\uFE0F' : '\u{1F35C}';
+          markerEl.innerHTML = '<div class="marker-food">' + icon + '</div>';
+        } else {
+          markerEl.innerHTML =
+            '<div class="marker-pin"><span class="marker-number">' + (idx + 1) + '</span></div>';
+        }
+
+        var marker = new AMap.Marker({
+          position: new AMap.LngLat(poi.lng, poi.lat),
+          content: markerEl,
+          offset: isFoodType ? new AMap.Pixel(-20, -28) : new AMap.Pixel(-18, -36),
+          extData: poi
+        });
+
+        marker.on('click', function(e) {
+          var d = e.target.getExtData();
+          var cat = d._category || 'scenic';
+          var isFood = (cat === 'food' || cat === 'drink');
+          var tagsHtml = (d.tags || []).map(function(t) {
+            return '<span class="poi-popup-tag">' + escapeHTML(t) + '</span>';
+          }).join('');
+          var durText = d.duration_min >= 60
+            ? Math.floor(d.duration_min / 60) + '小时' + (d.duration_min % 60 > 0 ? d.duration_min % 60 + '分钟' : '')
+            : d.duration_min + '分钟';
+          var photoHtml = '';
+          if (d.photos && d.photos.length > 0) {
+            photoHtml = '<img class="poi-popup-photo" src="' + escapeAttr(d.photos[0]) + '" alt="' + escapeAttr(d.name) + '" onerror="this.style.display=\'none\'">';
+          }
+          infoWindow.setContent(
+            photoHtml +
+            '<div style="font-weight:600;margin-bottom:4px;">' + escapeHTML(d.name) + '</div>' +
+            '<div style="font-size:12px;color:#888;margin-bottom:4px;">' +
+              tagsHtml +
+              '<span style="margin-left:4px;">\u23F1 ' + durText + '</span>' +
+            '</div>' +
+            (d.address ? '<div style="font-size:11px;color:#aaa;">\u{1F4CD} ' + escapeHTML(d.address) + '</div>' : '') +
+            (d.description ? '<div style="font-size:12px;color:#666;margin-top:6px;line-height:1.5;">' + escapeHTML(d.description) + '</div>' : '')
+          );
+          infoWindow.open(map, e.target.getPosition());
+          highlightCard(idx);
+          onPOIClickProactive(d, idx);
+        });
+
+        marker.setMap(map);
+        markers.push(marker);
+      });
+
+      // 路线
+      var polylines = [];
+      segments.forEach(function(seg) {
+        var path = (seg.coords || []).map(function(c) {
+          return new AMap.LngLat(c[0], c[1]);
+        });
+        if (path.length < 2) {
+          var fromPoi = pois[seg.from_index];
+          var toPoi = pois[seg.to_index];
+          if (fromPoi && toPoi) {
+            path.push(
+              new AMap.LngLat(fromPoi.lng, fromPoi.lat),
+              new AMap.LngLat(toPoi.lng, toPoi.lat)
+            );
+          }
+        }
+        if (path.length >= 2) {
+          var isMealSeg = seg._is_meal_segment;
+          var polyline = new AMap.Polyline({
+            path: path,
+            strokeColor: isMealSeg ? '#fa8c16' : '#1677ff',
+            strokeWeight: isMealSeg ? 4 : 5,
+            strokeOpacity: 0.75,
+            strokeStyle: isMealSeg ? 'dashed' : 'solid',
+            strokeDash: isMealSeg ? [10, 6] : undefined,
+            lineJoin: 'round',
+            lineCap: 'round',
+            showDir: true
+          });
+          polyline.setMap(map);
+          polylines.push(polyline);
+        }
+      });
+
+      // 自适应视野
+      if (markers.length > 0) {
+        map.setFitView(markers, false, [80, 80, 80, 420]);
+      }
+
+      window.__mapMarkers = markers;
+      window.__mapPolylines = polylines;
+    }
+
+    /**
+     * 多城市模式：渲染侧边栏（当前天 + 跨城交通提示 + 其他天概览）
+     */
+    function renderMultiDaySidebar() {
+      if (!__multiDayData) return;
+      var days = __multiDayData.days || [];
+      var segments = __multiDayData.inter_city_segments || [];
+      var currentDay = days[__currentDayIdx];
+      if (!currentDay || !currentDay.mapData) return;
+
+      var mapData = currentDay.mapData;
+      var pois = mapData.pois || [];
+      var totalDuration = mapData.total_duration_min || 0;
+      var totalWalking = mapData.total_walking_min || 0;
+      var scenicCount = mapData.scenic_count || 0;
+      var foodCount = mapData.food_count || 0;
+
+      var durText = totalDuration >= 60
+        ? Math.floor(totalDuration / 60) + '小时' + (totalDuration % 60 > 0 ? totalDuration % 60 + '分钟' : '')
+        : totalDuration + '分钟';
+
+      // 更新顶部标题
+      document.querySelector('.topbar-brand').innerHTML =
+        '\u{1F30C} ' + escapeHTML(currentDay.scenic_name || currentDay.city || '次元旅人') + ' - Day ' + (__currentDayIdx + 1);
+
+      // 构建侧边栏
+      var sidebar = document.getElementById('multiDaySidebar');
+      if (!sidebar) {
+        // 第一次渲染：创建侧边栏容器
+        sidebar = document.createElement('div');
+        sidebar.id = 'multiDaySidebar';
+        sidebar.style.cssText =
+          'position:absolute;right:0;top:0;bottom:0;width:360px;background:rgba(255,255,255,0.97);' +
+          'overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,0.08);z-index:100;padding:16px;' +
+          'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;';
+        document.getElementById('mapViewInner').appendChild(sidebar);
+      }
+
+      var html = '<div style="font-size:17px;font-weight:600;margin-bottom:12px;color:#1f1f1f;">' +
+        '\u{1F4CB} Day ' + (__currentDayIdx + 1) + ' \u00B7 ' + escapeHTML(currentDay.city) + ' \u00B7 ' + escapeHTML(currentDay.scenic_name || '') + '</div>' +
+        '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">' +
+          '<span style="font-size:12px;padding:4px 10px;border-radius:12px;background:#e6f4ff;color:#1677ff;">\u23F1 ' + durText + '</span>' +
+          '<span style="font-size:12px;padding:4px 10px;border-radius:12px;background:#f6ffed;color:#52c41a;">\u{1F6B6} ' + totalWalking + '分钟</span>';
+      if (scenicCount > 0) html += '<span style="font-size:12px;padding:4px 10px;border-radius:12px;background:#e6f4ff;color:#1677ff;">\u{1F3DE}\uFE0F ' + scenicCount + '个景点</span>';
+      if (foodCount > 0) html += '<span style="font-size:12px;padding:4px 10px;border-radius:12px;background:#fff7e6;color:#fa8c16;">\u{1F35C} ' + foodCount + '家美食</span>';
+      html += '</div>';
+
+      // 美食摘要
+      if (mapData.food_summary) {
+        html += '<div style="padding:12px;margin-bottom:16px;background:linear-gradient(135deg,#fff7e6,#fff1e0);border-radius:12px;border:1px solid rgba(250,140,22,0.2);">' +
+          '<div style="font-size:13px;font-weight:600;color:#d46b08;margin-bottom:6px;">\u{1F35C} ' + escapeHTML(currentDay.city) + '美食导览</div>' +
+          '<div style="font-size:12px;color:#666;line-height:1.6;">' + escapeHTML(mapData.food_summary) + '</div></div>';
+      }
+
+      // POI 列表
+      var scenicIdx = 0;
+      pois.forEach(function(poi, idx) {
+        var category = poi._category || 'scenic';
+        var isFood = (category === 'food' || category === 'drink');
+        var durStr = poi.duration_min >= 60
+          ? Math.floor(poi.duration_min / 60) + 'h' + (poi.duration_min % 60 > 0 ? poi.duration_min % 60 + 'm' : '')
+          : poi.duration_min + '分钟';
+        var tagsHtml = (poi.tags || []).map(function(t) {
+          return '<span style="font-size:11px;color:#666;background:#f5f5f5;padding:2px 8px;border-radius:8px;">' + escapeHTML(t) + '</span>';
+        }).join('');
+        var photoHtml = '';
+        if (poi.photos && poi.photos.length > 0) {
+          photoHtml = '<img class="sidebar-poi-photo" src="' + escapeAttr(poi.photos[0]) + '" alt="' + escapeAttr(poi.name) + '" onerror="this.style.display=\'none\'">';
+        }
+
+        var numLabel;
+        if (isFood) {
+          numLabel = '\u{1F35C}';
+        } else {
+          scenicIdx++;
+          numLabel = '<span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#1677ff;color:#fff;font-size:12px;font-weight:600;">' + scenicIdx + '</span>';
+        }
+
+        html += '<div class="sidebar-poi-card" data-idx="' + idx + '" onclick="focusMarker(' + idx + ')" style="display:flex;gap:12px;padding:12px;margin-bottom:8px;background:#fff;border-radius:12px;cursor:pointer;border:1px solid #f0f0f0;transition:all 0.2s;">' +
+          '<div style="flex-shrink:0;width:32px;text-align:center;">' + numLabel + '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            photoHtml +
+            '<div style="font-weight:600;font-size:14px;margin-bottom:4px;">' + escapeHTML(poi.name) + '</div>' +
+            '<div style="font-size:12px;color:#888;display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">' +
+              '<span>\u23F1 ' + durStr + '</span>' + tagsHtml +
+            '</div>' +
+            (poi.address ? '<div style="font-size:11px;color:#aaa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">\u{1F4CD} ' + escapeHTML(poi.address) + '</div>' : '') +
+          '</div></div>';
+
+        // 路段信息
+        if (idx < pois.length - 1) {
+          var seg = (mapData.segments || [])[idx];
+          if (seg && seg.walking_min > 0) {
+            var segColor = seg._is_meal_segment ? '#fa8c16' : '#bbb';
+            var segIcon = seg._is_meal_segment ? '\u{1F37D}\uFE0F' : '\u{1F6B6}';
+            html += '<div style="display:flex;align-items:center;justify-content:center;padding:4px 0;">' +
+              '<span style="font-size:11px;color:' + segColor + ';">' + segIcon + ' ' + seg.walking_min + '分钟</span></div>';
+          }
+        }
+      });
+
+      // 跨城交通提示（如果当前天不是最后一天）
+      if (__currentDayIdx < days.length - 1) {
+        var nextSeg = segments.find(function(s) { return s.from_day === __currentDayIdx + 1; });
+        if (nextSeg) {
+          var transIcon = '\u{1F684}';
+          html += '<div class="inter-city-card">' +
+            '<div class="transport-icon">' + transIcon + '</div>' +
+            '<div class="route-text">' + escapeHTML(nextSeg.from_city) + ' \u2192 ' + escapeHTML(nextSeg.to_city) + '</div>' +
+            '<div class="time-text">高铁约 ' + nextSeg.estimated_min + ' 分钟</div></div>';
+        }
+      }
+
+      sidebar.innerHTML = html;
     }
 
     // --- Dynamic AMap loader ---
@@ -2012,8 +2402,12 @@
         map.setFitView(markers, false, [80, 80, 80, 420]);
       }
 
-      // Render sidebar itinerary
-      renderMapSidebar(mapData, map, markers, infoWindow);
+      // Render sidebar itinerary (多城市 vs 单城市)
+      if (__multiDayData) {
+        renderMultiDaySidebar();
+      } else {
+        renderMapSidebar(mapData, map, markers, infoWindow);
+      }
 
       // Store references for cleanup
       window.__mapMarkers = markers;
@@ -2600,6 +2994,19 @@
       window.__CURRENT_MAP_DATA__ = null;
       window.__mapMarkers = null;
       window.__mapInfoWindow = null;
+
+      // --- 多城市状态清理 ---
+      __multiDayData = null;
+      __currentDayIdx = 0;
+      var dayTabs = document.getElementById('dayTabs');
+      if (dayTabs) {
+        dayTabs.style.display = 'none';
+        dayTabs.innerHTML = '';
+      }
+      var modeSwitcher = document.getElementById('mapModeSwitcher');
+      if (modeSwitcher) modeSwitcher.style.display = '';
+      var multiSidebar = document.getElementById('multiDaySidebar');
+      if (multiSidebar) multiSidebar.remove();
 
       // Cleanup voice
       stopVoice();
@@ -3476,7 +3883,9 @@
    */
   function openJournalModal() {
     var mapData = window.__CURRENT_MAP_DATA__;
-    if (!mapData || !mapData.pois || mapData.pois.length === 0) {
+    var isMultiDay = !!(__multiDayData && __multiDayData.days && __multiDayData.days.length > 1);
+
+    if (!isMultiDay && (!mapData || !mapData.pois || mapData.pois.length === 0)) {
       alert('请先完成路线规划，才能生成旅行手账哦！');
       return;
     }
@@ -3499,19 +3908,60 @@
         return r.text();
       })
       .then(function(templateHtml) {
-        // 注入数据到模板
-        var journalData = {
-          pois: mapData.pois || [],
-          segments: mapData.segments || [],
-          narrations: mapData.narrations || [],
-          city: mapData.city || '',
-          scenic_name: mapData.scenic_name || '',
-          city_welcome: mapData.city_welcome || '',
-          food_summary: mapData.food_summary || '',
-          total_duration_min: mapData.total_duration_min || 0,
-          total_walking_min: mapData.total_walking_min || 0,
-          date: new Date().toLocaleDateString('zh-CN'),
-        };
+        var journalData;
+
+        if (isMultiDay) {
+          // 多城市多日手账数据
+          var days = __multiDayData.days || [];
+          var cities = [];
+          var totalPois = 0;
+          days.forEach(function(d) {
+            if (d.city && cities.indexOf(d.city) < 0) cities.push(d.city);
+            if (d.mapData && d.mapData.pois) totalPois += d.mapData.pois.length;
+          });
+
+          journalData = {
+            is_multi_day: true,
+            total_days: days.length,
+            cities: cities,
+            city: cities.join('·'),
+            scenic_name: cities.join(' → ') + ' ' + days.length + '日游',
+            total_duration_min: __multiDayData.total_duration_min || 0,
+            total_walking_min: __multiDayData.total_walking_min || 0,
+            total_inter_city_min: __multiDayData.total_inter_city_min || 0,
+            inter_city_segments: __multiDayData.inter_city_segments || [],
+            days: days.map(function(d, i) {
+              var md = d.mapData || {};
+              return {
+                day: i + 1,
+                city: d.city || '',
+                scenic_name: d.scenic_name || '',
+                pois: md.pois || [],
+                segments: md.segments || [],
+                narrations: md.narrations || [],
+                city_welcome: md.city_welcome || '',
+                food_summary: md.food_summary || '',
+                total_duration_min: md.total_duration_min || 0,
+                total_walking_min: md.total_walking_min || 0,
+              };
+            }),
+            date: new Date().toLocaleDateString('zh-CN'),
+          };
+        } else {
+          // 单城市手账数据（原有逻辑）
+          journalData = {
+            pois: mapData.pois || [],
+            segments: mapData.segments || [],
+            narrations: mapData.narrations || [],
+            city: mapData.city || '',
+            scenic_name: mapData.scenic_name || '',
+            city_welcome: mapData.city_welcome || '',
+            food_summary: mapData.food_summary || '',
+            total_duration_min: mapData.total_duration_min || 0,
+            total_walking_min: mapData.total_walking_min || 0,
+            date: new Date().toLocaleDateString('zh-CN'),
+          };
+        }
 
         var dataJson = JSON.stringify(journalData)
           .replace(/</g, '\\u003c')

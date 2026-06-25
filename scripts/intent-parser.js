@@ -60,7 +60,18 @@ const SYSTEM_PROMPT = `你是一个旅游意图解析专家。请分析用户的
     "budget_level": "low"|"medium"|"high",
     "meal_times": ["breakfast"|"lunch"|"dinner"|"snack"],
     "food_focus": boolean
-  }
+  },
+  "is_multi_city": boolean（用户是否规划了多个城市的行程，如"杭州上海两日游"则为true，单城市则为false）,
+  "total_days": 数字（总天数，单日游为1，多日游为对应天数）,
+  "days": [
+    {
+      "day": 第几天（从1开始）,
+      "city": "该天的城市",
+      "scenic_area": "该天的景区/区域",
+      "activities": ["活动描述1", "活动描述2"],
+      "food_preferences": { ...同上结构... }
+    }
+  ]
 }
 
 字段说明：
@@ -78,6 +89,9 @@ const SYSTEM_PROMPT = `你是一个旅游意图解析专家。请分析用户的
   - budget_level：人均消费等级，low=<50元，medium=50-150元，high=>150元
   - meal_times：预计用餐时段，从游览时长推断（如4小时跨午餐则含lunch）
   - food_focus：如果用户说"主要为了吃"或"美食之旅"则为true
+- is_multi_city：用户是否规划了多个城市的行程。只有明确提到2个或以上不同城市时才为true。
+- total_days：行程总天数。单日游为1，"两日游"为2，"三日游"为3。
+- days：按天拆分的行程计划数组。单城市单日时为包含1个元素的数组。每天包含city（城市）、scenic_area（景区）、activities（活动列表）和food_preferences（该天的美食偏好）。
 
 只输出JSON，不要输出其他内容。
 
@@ -142,6 +156,70 @@ const SYSTEM_PROMPT = `你是一个旅游意图解析专家。请分析用户的
     "meal_times": ["breakfast", "lunch", "dinner", "snack"],
     "food_focus": true
   }
+}
+
+示例4：
+用户输入：杭州上海南京三日游，第一天逛西湖吃杭帮菜，第二天去上海外滩逛南京路，第三天游南京夫子庙
+输出：
+{
+  "duration_hours": 24,
+  "pace": "moderate",
+  "interests": ["观光", "美食", "历史文化"],
+  "physical_level": "medium",
+  "must_see": ["西湖", "外滩", "夫子庙"],
+  "avoid": [],
+  "scenic_area": "西湖",
+  "city": "杭州",
+  "food_preferences": {
+    "want_food": true,
+    "cuisine_types": ["杭帮菜", "本帮菜", "南京小吃"],
+    "budget_level": "medium",
+    "meal_times": ["breakfast", "lunch", "dinner"],
+    "food_focus": false
+  },
+  "is_multi_city": true,
+  "total_days": 3,
+  "days": [
+    {
+      "day": 1,
+      "city": "杭州",
+      "scenic_area": "西湖",
+      "activities": ["逛西湖", "吃杭帮菜"],
+      "food_preferences": {
+        "want_food": true,
+        "cuisine_types": ["杭帮菜", "浙菜"],
+        "budget_level": "medium",
+        "meal_times": ["lunch", "dinner"],
+        "food_focus": false
+      }
+    },
+    {
+      "day": 2,
+      "city": "上海",
+      "scenic_area": "外滩",
+      "activities": ["逛外滩", "逛南京路"],
+      "food_preferences": {
+        "want_food": true,
+        "cuisine_types": ["本帮菜", "小吃"],
+        "budget_level": "medium",
+        "meal_times": ["lunch", "dinner"],
+        "food_focus": false
+      }
+    },
+    {
+      "day": 3,
+      "city": "南京",
+      "scenic_area": "夫子庙",
+      "activities": ["游夫子庙", "吃南京小吃"],
+      "food_preferences": {
+        "want_food": true,
+        "cuisine_types": ["南京小吃", "淮扬菜"],
+        "budget_level": "medium",
+        "meal_times": ["lunch", "dinner"],
+        "food_focus": false
+      }
+    }
+  ]
 }`;
 
 
@@ -428,6 +506,56 @@ function fallbackRegexParse(userInput) {
 
   result.food_preferences = foodPrefs;
 
+  // ---- 多城市检测（正则回退） ----
+  // 检测 "第X天" 模式
+  const dayPattern = /第([一二三四五六七八九十\d]+)天[，,：:\s]*([^第]*)/g;
+  const detectedDays = [];
+  let dayMatch;
+  while ((dayMatch = dayPattern.exec(userInput)) !== null) {
+    const dayText = dayMatch[2];
+    // 从该天的描述中匹配城市
+    const cityNames = ['北京','上海','广州','深圳','杭州','南京','成都','重庆','西安','武汉','长沙','苏州','厦门','青岛','大理','丽江','三亚','昆明','桂林','拉萨','天津','郑州','合肥','福州','哈尔滨','沈阳','大连','济南','太原','兰州','银川','西宁','呼和浩特','乌鲁木齐','拉萨','珠海','威海','烟台'];
+    let dayCity = '';
+    for (const c of cityNames) {
+      if (dayText.includes(c)) { dayCity = c; break; }
+    }
+    // 匹配景区
+    const scenicNames = ['西湖','外滩','故宫','长城','兵马俑','夫子庙','宽窄巷子','春熙路','南京路','鼓浪屿','张家界','黄山','九寨沟','布达拉宫','洱海','古城','天安门','颐和园','天坛','东方明珠','武侯祠','锦里','迪士尼','环球影城'];
+    let dayScenic = '';
+    for (const s of scenicNames) {
+      if (dayText.includes(s)) { dayScenic = s; break; }
+    }
+    if (dayCity || dayScenic) {
+      detectedDays.push({
+        day: detectedDays.length + 1,
+        city: dayCity || result.city,
+        scenic_area: dayScenic || '',
+        activities: [],
+        food_preferences: foodPrefs,
+      });
+    }
+  }
+
+  if (detectedDays.length >= 2) {
+    result.is_multi_city = true;
+    result.total_days = detectedDays.length;
+    result.days = detectedDays;
+    // 用第一天的城市作为默认城市
+    if (!result.city && detectedDays[0].city) {
+      result.city = detectedDays[0].city;
+    }
+  } else {
+    result.is_multi_city = false;
+    result.total_days = 1;
+    result.days = [{
+      day: 1,
+      city: result.city,
+      scenic_area: result.scenic_area,
+      activities: [],
+      food_preferences: foodPrefs,
+    }];
+  }
+
   return result;
 }
 
@@ -613,8 +741,42 @@ async function parseIntent(userInput, config = {}) {
       avoid:           Array.isArray(parsed.avoid)      ? parsed.avoid      : [],
       scenic_area:     parsed.scenic_area     || '',
       city:            parsed.city            || '',
-      food_preferences: parsed.food_preferences
+      food_preferences: parsed.food_preferences,
+      // 多城市多日支持
+      is_multi_city:   parsed.is_multi_city === true && Array.isArray(parsed.days) && parsed.days.length > 1,
+      total_days:      parsed.total_days || 1,
+      days:            Array.isArray(parsed.days) && parsed.days.length > 0 ? parsed.days : null,
     };
+
+    // 多城市后处理：确保 days 数组有效
+    if (result.is_multi_city && result.days) {
+      result.days = result.days.map((d, i) => ({
+        day: d.day || (i + 1),
+        city: d.city || result.city,
+        scenic_area: d.scenic_area || '',
+        activities: Array.isArray(d.activities) ? d.activities : [],
+        food_preferences: d.food_preferences || result.food_preferences,
+      }));
+      // 过滤掉没有城市的无效天
+      result.days = result.days.filter(d => d.city);
+      if (result.days.length < 2) {
+        result.is_multi_city = false;
+        result.days = null;
+        result.total_days = 1;
+      }
+      console.log(`[intent-parser] 多城市行程: ${result.days.length}天, 城市: ${result.days.map(d => d.city).join('→')}`);
+    } else {
+      // 单城市：生成默认的 days 数组（1天）
+      result.days = [{
+        day: 1,
+        city: result.city,
+        scenic_area: result.scenic_area,
+        activities: [],
+        food_preferences: result.food_preferences,
+      }];
+      result.is_multi_city = false;
+      result.total_days = 1;
+    }
 
     console.log('[intent-parser] LLM 解析成功');
     return result;

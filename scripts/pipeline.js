@@ -317,6 +317,203 @@ async function generateCityWelcome(city, scenicName, poiCount, foodCount, config
   return '';
 }
 
+// ---------- 多城市多日管线 ----------
+
+/**
+ * 跨城交通时间估算（简单规则：相邻城市高铁约60-120分钟）
+ */
+function estimateInterCityTravel(fromCity, toCity) {
+  // 常见城市群高铁时间（分钟），粗略估算
+  const knownRoutes = {
+    '杭州-上海': 60, '上海-杭州': 60,
+    '杭州-南京': 90, '南京-杭州': 90,
+    '上海-南京': 75, '南京-上海': 75,
+    '北京-天津': 30, '天津-北京': 30,
+    '广州-深圳': 30, '深圳-广州': 30,
+    '成都-重庆': 75, '重庆-成都': 75,
+    '西安-成都': 210, '成都-西安': 210,
+    '武汉-长沙': 90, '长沙-武汉': 90,
+    '北京-上海': 270, '上海-北京': 270,
+    '北京-杭州': 300, '杭州-北京': 300,
+  };
+  const key = `${fromCity}-${toCity}`;
+  return knownRoutes[key] || 90; // 默认 90 分钟
+}
+
+/**
+ * 执行多城市多日旅游规划管线。
+ * 按天循环调用 POI 搜索 + 路线优化，生成跨城交通段，汇总全程数据。
+ */
+async function runMultiDayPipeline(userInput, intent, config, options) {
+  const outputPath = options.output || 'tour-map.html';
+  const days = intent.days;
+
+  console.log(`\n🗺️ 多城市行程: ${days.length}天, ${days.map(d => d.city).join(' → ')}`);
+
+  const dayResults = [];
+  const interCitySegments = [];
+
+  for (let i = 0; i < days.length; i++) {
+    const dayPlan = days[i];
+    console.log(`\n📍 Day ${i + 1}/${days.length}: ${dayPlan.city} · ${dayPlan.scenic_area || '市区'}`);
+
+    // 阶段 2：获取 POI（每天独立调用）
+    const scenicName = dayPlan.scenic_area || dayPlan.city;
+    let pois;
+    try {
+      pois = await fetchScenicPOIs(scenicName, dayPlan.city, {
+        ...config,
+        intent: {
+          ...intent,
+          duration_hours: 8,  // 每天默认 8 小时
+          scenic_area: dayPlan.scenic_area,
+          city: dayPlan.city,
+          food_preferences: dayPlan.food_preferences || intent.food_preferences,
+        },
+        skipAroundSearch: false,
+        skipDetailFetch: false,
+        includeFood: true,
+        includeParking: false,
+      });
+      console.log(`   ✔ 获取到 ${pois.length} 个 POI`);
+    } catch (err) {
+      console.warn(`   ⚠ Day ${i + 1} POI 获取失败: ${err.message}`);
+      pois = [];
+    }
+
+    if (!pois || pois.length === 0) {
+      console.warn(`   ⚠ Day ${i + 1} 无 POI 数据，跳过`);
+      continue;
+    }
+
+    // 阶段 3：路线优化（每天独立调用，8小时预算）
+    let routeResult;
+    const dayIntent = {
+      ...intent,
+      duration_hours: 8,
+      scenic_area: dayPlan.scenic_area,
+      city: dayPlan.city,
+      food_preferences: dayPlan.food_preferences || intent.food_preferences,
+    };
+    try {
+      routeResult = await optimizeRoute(pois, dayIntent, config);
+      const selectedCount = (routeResult.ordered_pois || []).length;
+      console.log(`   ✔ 路线优化完成, ${selectedCount} 个景点`);
+    } catch (err) {
+      console.warn(`   ⚠ Day ${i + 1} 路线优化失败: ${err.message}`);
+      continue;
+    }
+
+    // 数据转换
+    const mapData = transformForMap(routeResult, scenicName, dayIntent);
+
+    // 智能内容生成（每天的美食摘要和欢迎词）
+    const foodPois = pois.filter(p => p._category === 'food' || p._category === 'drink');
+    let foodSummary = '';
+    let welcome = '';
+    try {
+      [foodSummary, welcome] = await Promise.all([
+        generateCityFoodSummary(dayPlan.city, foodPois, config),
+        generateCityWelcome(dayPlan.city, scenicName, mapData.scenic_count, mapData.food_count, config),
+      ]);
+    } catch (err) {
+      console.warn(`   ⚠ Day ${i + 1} 内容生成失败: ${err.message}`);
+    }
+
+    mapData.food_summary = foodSummary;
+    mapData.city_welcome = welcome;
+    mapData.city = dayPlan.city;
+
+    dayResults.push({
+      day: i + 1,
+      city: dayPlan.city,
+      scenic_name: scenicName,
+      mapData,
+    });
+
+    // 跨城交通段（在相邻两天之间）
+    if (i < days.length - 1) {
+      const nextDay = days[i + 1];
+      const travelMin = estimateInterCityTravel(dayPlan.city, nextDay.city);
+      interCitySegments.push({
+        type: 'inter_city',
+        from_city: dayPlan.city,
+        to_city: nextDay.city,
+        from_day: i + 1,
+        to_day: i + 2,
+        transport: travelMin <= 60 ? 'train' : 'train',
+        estimated_min: travelMin,
+      });
+    }
+  }
+
+  if (dayResults.length === 0) {
+    throw new Error('多城市规划失败：所有天的 POI 数据获取均失败，请检查输入或网络连接。');
+  }
+
+  // 汇总全程统计
+  let totalPois = 0;
+  let totalDurationMin = 0;
+  let totalWalkingMin = 0;
+  let totalScenicCount = 0;
+  let totalFoodCount = 0;
+  let totalInterCityMin = 0;
+
+  dayResults.forEach(d => {
+    totalPois += (d.mapData.pois || []).length;
+    totalDurationMin += d.mapData.total_duration_min || 0;
+    totalWalkingMin += d.mapData.total_walking_min || 0;
+    totalScenicCount += d.mapData.scenic_count || 0;
+    totalFoodCount += d.mapData.food_count || 0;
+  });
+
+  interCitySegments.forEach(s => {
+    totalInterCityMin += s.estimated_min || 0;
+  });
+
+  const totalDays = dayResults.length;
+  const totalDurationStr = totalDays > 1 ? `${totalDays}天` : formatDuration(totalDurationMin);
+
+  // 汇总 narrations（合并各天的过渡文案）
+  const allNarrations = [];
+  dayResults.forEach(d => {
+    if (d.mapData.narrations) {
+      allNarrations.push(...d.mapData.narrations);
+    }
+  });
+
+  const summary = {
+    is_multi_city: true,
+    total_days: totalDays,
+    days: dayResults,
+    inter_city_segments: interCitySegments,
+    scenic_name: dayResults.map(d => d.scenic_name).join('·'),
+    city: dayResults.map(d => d.city).join('→'),
+    poi_count: totalPois,
+    total_duration: totalDurationStr,
+    total_duration_min: totalDurationMin,
+    total_walking_min: totalWalkingMin,
+    total_inter_city_min: totalInterCityMin,
+    scenic_count: totalScenicCount,
+    food_count: totalFoodCount,
+    narrations: allNarrations,
+    intent: intent,
+    output_file: path.resolve(outputPath),
+  };
+
+  console.log('\n✅ 多城市规划完成！');
+  console.log('───────────────────────────────────');
+  console.log(`  行程: ${dayResults.map(d => d.city).join(' → ')}`);
+  console.log(`  天数: ${totalDays}天`);
+  console.log(`  总景点: ${totalScenicCount} 个 | 总美食: ${totalFoodCount} 家`);
+  console.log(`  总游览: ${formatDuration(totalDurationMin)}`);
+  console.log(`  总步行: ${formatDuration(totalWalkingMin)}`);
+  console.log(`  城际交通: ${formatDuration(totalInterCityMin)}`);
+  console.log('───────────────────────────────────\n');
+
+  return summary;
+}
+
 // ---------- 核心管线 ----------
 
 /**
@@ -349,6 +546,13 @@ async function runPipeline(userInput, options = {}) {
   } catch (err) {
     console.error('   ✘ 意图解析失败:', err.message);
     throw new Error(`阶段一（意图解析）出错: ${err.message}`);
+  }
+
+  // ============================================================
+  // 多城市分支：走独立的多日管线
+  // ============================================================
+  if (intent.is_multi_city && intent.days && intent.days.length > 1) {
+    return runMultiDayPipeline(userInput, intent, config, options);
   }
 
   // ============================================================
