@@ -9,6 +9,7 @@ __pycache__/
 # Generated output
 tour-map.html
 output/
+.tts-cache/
 
 # QoderWork internal metadata
 _meta.json

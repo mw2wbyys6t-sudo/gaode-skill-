@@ -6,5 +6,10 @@
   "llmEndpoint": "https://api.deepseek.com/v1/chat/completions",
   "llmApiKey": "your_llm_api_key_here",
   "llmModel": "deepseek-chat",
-  "appname": "gaode-map-lbs"
+  "appname": "gaode-map-lbs",
+  "food_provider": {
+    "type": "llm",
+    "food_api_key": "",
+    "food_api_endpoint": ""
+  }
 }

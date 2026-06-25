@@ -312,6 +312,9 @@
     }
     .food-card .food-cost { font-family: var(--font-en); font-size: 16px; color: var(--accent-warm); font-weight: 700; }
     .food-card .food-desc { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.5; }
+    .food-card .food-signature { font-size: 12px; color: #d46b08; margin-top: 6px; font-weight: 500; }
+    .food-card .food-review { font-size: 12px; color: #888; font-style: italic; margin-top: 4px; line-height: 1.4; }
+    .food-card .food-time { font-size: 11px; color: #52c41a; margin-top: 4px; }
 
     /* 语音日记 */
     .narration-section { margin: 36px 0; }
@@ -729,8 +732,8 @@
 
       function findFirstPhoto(pois) {
         for (var i = 0; i < pois.length; i++) {
-          if (pois[i].photos && pois[i].photos.length > 0 && pois[i].photos[0].url) {
-            return pois[i].photos[0].url;
+          if (pois[i].photos && pois[i].photos.length > 0 && pois[i].photos[0]) {
+            return pois[i].photos[0];
           }
         }
         return null;
@@ -756,8 +759,8 @@
         var html = '';
         scenicPois.forEach(function(poi) {
           var photo = '';
-          if (poi.photos && poi.photos.length > 0 && poi.photos[0].url) {
-            photo = '<img src="' + poi.photos[0].url + '" alt="' + (poi.name||'') + '" crossorigin="anonymous">';
+          if (poi.photos && poi.photos.length > 0 && poi.photos[0]) {
+            photo = '<img src="' + poi.photos[0] + '" alt="' + (poi.name||'') + '" crossorigin="anonymous">';
           } else { photo = '\uD83C\uDFDB\uFE0F'; }
           var stars = '';
           if (poi.rating) { for (var s=0; s<Math.min(5,Math.round(poi.rating)); s++) stars += '\u2605'; }
@@ -784,9 +787,27 @@
           var costHtml = poi._avg_cost ? '<span class="food-cost">\u4EBA\u5747 \u00A5' + poi._avg_cost + '</span>' : '';
           var desc = poi.description || '';
           if (desc.length > 50) desc = desc.substring(0,47) + '...';
+          // v2.3: Signature dishes
+          var sigHtml = '';
+          if (poi._signature_dishes && poi._signature_dishes.length > 0) {
+            sigHtml = '<div class="food-signature">\u{1F373} \u62DB\u724C\uFF1A' +
+              poi._signature_dishes.map(function(d) { return d.name || d; }).join('\u3001') +
+              '</div>';
+          }
+          // v2.3: Review summary
+          var reviewHtml = '';
+          if (poi._review_summary) {
+            reviewHtml = '<div class="food-review">\u201C' + poi._review_summary + '\u201D</div>';
+          }
+          // v2.3: Best time
+          var timeHtml = '';
+          if (poi._best_time) {
+            timeHtml = '<div class="food-time">\u23F0 ' + poi._best_time + '</div>';
+          }
           html += '<div class="food-card"><div class="food-name">' + (poi.name||'') + '</div>' +
             (tagsHtml ? '<div class="food-tags">' + tagsHtml + '</div>' : '') +
-            costHtml + (desc ? '<div class="food-desc">' + desc + '</div>' : '') + '</div>';
+            costHtml + (desc ? '<div class="food-desc">' + desc + '</div>' : '') +
+            sigHtml + reviewHtml + timeHtml + '</div>';
         });
         return html;
       }

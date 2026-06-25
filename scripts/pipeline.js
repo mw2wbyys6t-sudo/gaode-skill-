@@ -31,6 +31,7 @@ const { parseIntent }    = require('./intent-parser');
 const { fetchScenicPOIs } = require('./scenic-data-fetcher');
 const { optimizeRoute }   = require('./route-optimizer');
 const { generateMap }     = require('./map-visualizer');
+const { createFoodProvider } = require('./food-data-provider');
 
 // ---------- 配置加载 ----------
 
@@ -424,6 +425,21 @@ async function runMultiDayPipeline(userInput, intent, config, options) {
     mapData.city_welcome = welcome;
     mapData.city = dayPlan.city;
 
+    // v2.2 美食数据深度增强
+    try {
+      const foodProvider = createFoodProvider(config);
+      // 从 mapData.pois 中提取实际路线中的美食 POI
+      const routeFoodPois = mapData.pois.filter(p => p._category === 'food' || p._category === 'drink');
+      if (routeFoodPois.length > 0) {
+        await foodProvider.enrichFoodPois(dayPlan.city, routeFoodPois, config);
+        // enrichFoodPois 直接修改了 routeFoodPois 中的对象（与 mapData.pois 同引用）
+      }
+      const mustEat = await foodProvider.getCityMustEatList(dayPlan.city, config);
+      if (mustEat) mapData.must_eat = mustEat;
+    } catch (err) {
+      console.warn(`   ⚠ Day ${i + 1} 美食增强失败（不影响主流程）: ${err.message}`);
+    }
+
     dayResults.push({
       day: i + 1,
       city: dayPlan.city,
@@ -628,10 +644,34 @@ async function runPipeline(userInput, options = {}) {
   mapData.food_summary = foodSummary;
   mapData.narrations = narrations;
   mapData.city_welcome = welcome;
+  mapData.city = city;
 
   if (foodSummary) console.log(`   ✔ 美食摘要: ${foodSummary.slice(0, 40)}...`);
   if (welcome) console.log(`   ✔ 欢迎词: ${welcome.slice(0, 40)}...`);
   if (narrations.length > 0) console.log(`   ✔ 过渡文案: ${narrations.length} 段`);
+
+  // ============================================================
+  // v2.2 增强：美食 POI 深度信息 + 城市必吃清单
+  // ============================================================
+  console.log('\n🍜 v2.2 增强：美食数据深度增强...');
+  try {
+    const foodProvider = createFoodProvider(config);
+    // 从 mapData.pois 中提取实际路线中的美食 POI（而非全部候选）
+    const routeFoodPois = mapData.pois.filter(p => p._category === 'food' || p._category === 'drink');
+    if (routeFoodPois.length > 0) {
+      await foodProvider.enrichFoodPois(city, routeFoodPois, config);
+      // enrichFoodPois 直接修改了 routeFoodPois 中的对象（与 mapData.pois 同引用）
+    }
+  } catch (err) {
+    console.warn(`   ⚠ 美食增强失败（不影响主流程）: ${err.message}`);
+  }
+  try {
+    const foodProvider = createFoodProvider(config);
+    const mustEat = await foodProvider.getCityMustEatList(city, config);
+    if (mustEat) mapData.must_eat = mustEat;
+  } catch (err) {
+    console.warn(`   ⚠ 必吃清单生成失败（不影响主流程）: ${err.message}`);
+  }
 
   // ============================================================
   // 阶段 4：生成地图（可选跳过 — Web 模式下前端动态渲染）
