@@ -17,6 +17,7 @@ const express = require('express');
 const path = require('path');
 const http = require('http');
 const { runPipeline } = require('./scripts/pipeline');
+const { runSitePipeline } = require('./scripts/site-pipeline');
 const dialogueManager = require('./scripts/dialogue-manager');
 const sessionStore = require('./scripts/session-store');
 
@@ -452,6 +453,172 @@ app.post('/api/session/:sessionId/state', (req, res) => {
   res.json({ success: true, state });
 });
 
+// ============================================================
+// 餐饮选址通 - 选址分析 API
+// ============================================================
+
+// --- API: 选址分析（端到端选址管线） ---
+app.get('/api/site-analysis', async (req, res) => {
+  const input = req.query.input;
+  const city = req.query.city || '';
+
+  if (!input) {
+    return res.status(400).json({ error: '缺少 input 参数' });
+  }
+
+  console.log(`\n[餐饮选址通] 收到选址分析请求: "${input}" (城市: ${city || '自动'})`);
+
+  try {
+    const result = await runSitePipeline(input, {
+      city: city || undefined,
+      skipReport: true,
+    });
+
+    res.json({
+      success: true,
+      intent: result.intent,
+      scores: result.scores,
+      comparison: result.comparison,
+      recommendation: result.recommendation,
+      areas: result.areas.map(a => ({
+        area_name: a.area_name,
+        center: a.center,
+        score: a.score,
+        competition_summary: {
+          core: a.competition?.rings?.core ? {
+            food_count: a.competition.rings.core.food_count,
+            drink_count: a.competition.rings.core.drink_count,
+            cuisine_breakdown: a.competition.rings.core.cuisine_breakdown,
+          } : null,
+        },
+        profile_summary: a.profile ? {
+          areaType: a.profile.areaType,
+          transitScore: a.profile.transitScore,
+          complementaryScore: a.profile.complementaryScore,
+          narrative: a.profile.narrative,
+        } : null,
+      })),
+      amapKey: sharedConfig.amapJsapiKey || '',
+      amapSecurityCode: sharedConfig.amapSecurityJsCode || '',
+    });
+  } catch (err) {
+    console.error('[餐饮选址通] 选址分析失败:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- API: 多商圈对比 ---
+app.post('/api/site-compare', async (req, res) => {
+  const { areas, restaurant_type, city } = req.body || {};
+
+  if (!areas || !Array.isArray(areas) || areas.length === 0) {
+    return res.status(400).json({ error: '缺少 areas 数组参数' });
+  }
+
+  const input = `在${city || ''}${areas.join('和')}开${restaurant_type || '餐饮'}店`;
+  console.log(`\n[餐饮选址通] 多商圈对比: ${areas.join(' vs ')}`);
+
+  try {
+    const result = await runSitePipeline(input, {
+      city: city || undefined,
+      skipReport: true,
+    });
+
+    res.json({
+      success: true,
+      comparison: result.comparison,
+      scores: result.scores,
+      recommendation: result.recommendation,
+    });
+  } catch (err) {
+    console.error('[餐饮选址通] 多商圈对比失败:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- API: 选址顾问对话（使用选址通人设） ---
+app.post('/api/site-chat', async (req, res) => {
+  const { sessionId, message, city } = req.body || {};
+
+  if (!message) {
+    return res.status(400).json({ error: '缺少 message 参数' });
+  }
+
+  const sid = sessionStore.resolveSessionId(sessionId || null);
+  console.log(`\n[选址通] 对话 (${sid}): "${message.slice(0, 60)}..."`);
+
+  try {
+    // 检查是否包含选址分析意图
+    const { parseSiteIntent } = require('./scripts/site-intent-parser');
+    const intent = await parseSiteIntent(message);
+
+    // 如果有明确的选址意图（有餐饮类型或目标区域），触发选址分析
+    if (intent.restaurant_type && (intent.target_areas.length > 0 || intent.city)) {
+      console.log(`[选址通] 检测到选址意图: ${intent.restaurant_type} | ${intent.city}`);
+
+      try {
+        const result = await runSitePipeline(message, {
+          city: city || intent.city || undefined,
+          skipReport: true,
+        });
+
+        // 更新会话状态
+        sessionStore.updateState(sid, {
+          siteAnalysis: {
+            intent,
+            scores: result.scores,
+            recommendation: result.recommendation,
+            timestamp: Date.now(),
+          },
+        });
+
+        // 构建友好回复
+        const topScore = result.scores[0];
+        let reply = `好的，我来帮你分析一下。\n\n`;
+        for (const score of result.scores) {
+          reply += `📍 ${score.area_name}：${score.total}分（${score.grade}）\n`;
+        }
+        if (result.recommendation) {
+          reply += `\n${result.recommendation}`;
+        }
+
+        res.json({
+          success: true,
+          reply,
+          intent: 'site',
+          siteData: {
+            scores: result.scores,
+            comparison: result.comparison,
+            recommendation: result.recommendation,
+            amapKey: sharedConfig.amapJsapiKey || '',
+            amapSecurityCode: sharedConfig.amapSecurityJsCode || '',
+          },
+        });
+        return;
+      } catch (siteErr) {
+        console.error('[选址通] 选址分析失败:', siteErr.message);
+        // 分析失败，回退到普通对话
+      }
+    }
+
+    // 普通对话模式：使用选址顾问人设回复
+    const chatResult = await dialogueManager.chat(message, sid, {
+      city: city || undefined,
+      useSiteConsultant: true,
+    });
+
+    res.json({
+      success: true,
+      reply: chatResult.reply,
+      cleanText: chatResult.cleanText,
+      intent: 'chat',
+    });
+  } catch (err) {
+    console.error('[选址通] 对话处理失败:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // --- 启动服务器 ---
 app.listen(PORT, () => {
   console.log(`\n🌌 次元旅人 v2.0 服务器已启动`);
@@ -461,5 +628,9 @@ app.listen(PORT, () => {
   console.log(`   对话 API    POST http://localhost:${PORT}/api/chat`);
   console.log(`   会话 API    http://localhost:${PORT}/api/session/:id`);
   console.log(`   语音 API    http://localhost:${PORT}/api/tts (后端 TTS: ${TTS_PORT})`);
-  console.log(`   批量语音    http://localhost:${PORT}/api/tts/batch\n`);
+  console.log(`   批量语音    http://localhost:${PORT}/api/tts/batch`);
+  console.log(`   ─── 餐饮选址通 ───`);
+  console.log(`   选址分析    http://localhost:${PORT}/api/site-analysis?input=...`);
+  console.log(`   商圈对比    POST http://localhost:${PORT}/api/site-compare`);
+  console.log(`   选址对话    POST http://localhost:${PORT}/api/site-chat\n`);
 });

@@ -457,6 +457,43 @@
       border-color: rgba(139, 92, 246, 0.4);
     }
 
+    /* --- Mode toggle (tourism / site selection) --- */
+    .mode-toggle {
+      display: flex;
+      gap: 0;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(139, 92, 246, 0.25);
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .mode-toggle-btn {
+      padding: 8px 24px;
+      border: none;
+      background: rgba(255, 255, 255, 0.03);
+      color: rgba(196, 181, 253, 0.5);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+    .mode-toggle-btn:hover {
+      background: rgba(139, 92, 246, 0.1);
+      color: rgba(196, 181, 253, 0.7);
+    }
+    .mode-toggle-btn.active {
+      background: linear-gradient(135deg, #7c3aed, #6366f1);
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(124, 58, 237, 0.3);
+    }
+    .mode-toggle-btn + .mode-toggle-btn {
+      border-left: 1px solid rgba(139, 92, 246, 0.25);
+    }
+
     /* --- Map result view --- */
     .map-result {
       display: none;
@@ -1577,19 +1614,31 @@
       <h1>&#x2728; 欢迎回来，<span id="welcomeName">旅人</span></h1>
       <p>告诉次元旅人你想去哪里，AI 将为你规划最优游览路线，生成可交互的次元地图。</p>
 
+      <!-- Mode toggle: tourism vs site selection -->
+      <div class="mode-toggle" id="modeToggle">
+        <button class="mode-toggle-btn active" id="modeBtnTourism" onclick="toggleMode('tourism')">&#x1F5FA; 旅游规划</button>
+        <button class="mode-toggle-btn" id="modeBtnSite" onclick="toggleMode('site')">&#x1F374; 餐饮选址</button>
+      </div>
+
       <div class="planner-box" id="plannerBox">
         <textarea id="tripInput" placeholder="描述你的旅行计划... 例如：我想悠闲地逛西湖2小时，顺便尝尝当地美食"></textarea>
         <div class="planner-actions">
           <input type="text" id="cityInput" placeholder="城市（可选）">
           <button class="planner-go-btn" onclick="startPlanning()">&#x1F5FA; 开始规划</button>
         </div>
-        <div class="quick-examples">
+        <div class="quick-examples" id="tourismChips">
           <span class="example-chip" onclick="fillExample(this)">悠闲逛西湖2小时</span>
           <span class="example-chip" onclick="fillExample(this)">带孩子玩故宫半天</span>
           <span class="example-chip" onclick="fillExample(this)">快速游览外滩看夜景</span>
           <span class="example-chip" onclick="fillExample(this)">黄山一日游爬山</span>
           <span class="example-chip" onclick="fillExample(this)">成都吃一天地道川菜</span>
           <span class="example-chip" onclick="fillExample(this)">西安边逛边吃小吃</span>
+        </div>
+        <div class="quick-examples" id="siteChips" style="display:none;">
+          <span class="example-chip" onclick="fillExample(this)">火锅店选址</span>
+          <span class="example-chip" onclick="fillExample(this)">奶茶店选址</span>
+          <span class="example-chip" onclick="fillExample(this)">川菜馆选址</span>
+          <span class="example-chip" onclick="fillExample(this)">烧烤店选址</span>
         </div>
       </div>
 
@@ -1736,6 +1785,35 @@
       }
     });
 
+    // --- Mode toggle (tourism / site selection) ---
+    var currentMode = 'tourism';  // 'tourism' | 'site'
+
+    function toggleMode(mode) {
+      currentMode = mode;
+      var btnTourism = document.getElementById('modeBtnTourism');
+      var btnSite = document.getElementById('modeBtnSite');
+      var tourismChips = document.getElementById('tourismChips');
+      var siteChips = document.getElementById('siteChips');
+      var tripInput = document.getElementById('tripInput');
+      var goBtn = document.querySelector('.planner-go-btn');
+
+      if (mode === 'tourism') {
+        btnTourism.classList.add('active');
+        btnSite.classList.remove('active');
+        tourismChips.style.display = '';
+        siteChips.style.display = 'none';
+        tripInput.placeholder = '描述你的旅行计划... 例如：我想悠闲地逛西湖2小时，顺便尝尝当地美食';
+        goBtn.innerHTML = '&#x1F5FA; 开始规划';
+      } else {
+        btnSite.classList.add('active');
+        btnTourism.classList.remove('active');
+        tourismChips.style.display = 'none';
+        siteChips.style.display = '';
+        tripInput.placeholder = '描述你的餐饮选址需求，例如：在成都春熙路开火锅店';
+        goBtn.innerHTML = '&#x1F374; 开始选址';
+      }
+    }
+
     // --- Fill example ---
     function fillExample(el) {
       const text = el.textContent;
@@ -1746,6 +1824,10 @@
         '黄山一日游爬山': '黄山一日游，体力好喜欢爬山，想看日出和奇松',
         '成都吃一天地道川菜': '成都一日游，主要想吃地道川菜，看看有没有好吃的小吃',
         '西安边逛边吃小吃': '西安半日游，想边逛边吃各种当地小吃',
+        '火锅店选址': '在成都春熙路附近开一家火锅店，预算50万，面积约200平',
+        '奶茶店选址': '在上海南京路步行街附近开一家奶茶店，主打年轻消费群体',
+        '川菜馆选址': '在北京朝阳区CBD附近开一家中档川菜馆，面向上班族',
+        '烧烤店选址': '在深圳华强北附近开一家烧烤店，做夜宵生意',
       };
       document.getElementById('tripInput').value = map[text] || text;
     }
@@ -1816,7 +1898,9 @@
 
       // --- Phase 1: 智能引导判断（输入模糊时小次主动提问） ---
       var _cityInput = document.getElementById('cityInput').value.trim();
-      if (input.length < 10 && !/\d+[天日小时h]|一日游|半日游|美食|景点|逛|玩|游/.test(input)) {
+      if (currentMode === 'site') {
+        // Site selection mode: skip smart guidance, go straight to planning
+      } else if (input.length < 10 && !/\d+[天日小时h]|一日游|半日游|美食|景点|逛|玩|游/.test(input)) {
         // 输入过短且不含时间/关键词 → 触发小次引导
         handlePlanStartProactive(input, _cityInput);
         return; // 暂不执行规划，等待用户补充
@@ -1832,7 +1916,13 @@
       loading.classList.add('active');
 
       // Pipeline step simulation
-      const steps = [
+      const steps = (currentMode === 'site') ? [
+        '正在分析选址需求...',
+        '获取周边商圈与客流数据...',
+        '评估竞争与消费人群...',
+        '生成选址报告...',
+        '生成选址地图...',
+      ] : [
         '正在解析你的旅行意图...',
         '获取景区与美食 POI 数据...',
         '智能路线优化中...',
@@ -1852,7 +1942,8 @@
       const params = new URLSearchParams({ input });
       if (city) params.set('city', city);
 
-      fetch('/api/plan?' + params.toString())
+      const apiEndpoint = (currentMode === 'site') ? '/api/site-analysis' : '/api/plan';
+      fetch(apiEndpoint + '?' + params.toString())
         .then(r => {
           if (!r.ok) return r.json().then(d => { throw new Error(d.error || '规划失败'); });
           return r.json();

@@ -11,8 +11,12 @@ tour-map.html
 output/
 .tts-cache/
 
+# Legacy scripts (v1.0)
+gaode_skill.py
+
 # QoderWork internal metadata
 _meta.json
+CHECK_RESULT.md
 
 # OS files
 .DS_Store

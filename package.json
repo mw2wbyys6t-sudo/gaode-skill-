@@ -1,11 +1,13 @@
 {
   "name": "gaode-map-lbs",
-  "version": "2.0.0",
-  "description": "次元旅人 - 智能旅游规划系统：LLM意图解析 + 高德POI动态获取 + 路线优化 + 地图可视化",
+  "version": "3.0.0",
+  "description": "次元旅人 - 智能旅游规划 + 餐饮选址分析系统：LLM意图解析 + 高德POI动态获取 + 路线优化 + 地图可视化 + 多半径竞争扫描 + 商圈画像 + 100分选址评分 + Word报告生成",
   "main": "scripts/pipeline.js",
   "scripts": {
     "start": "node server.js",
     "plan": "node scripts/pipeline.js",
+    "site": "node scripts/site-pipeline.js",
+    "site-report": "node scripts/site-pipeline.js --open",
     "intent": "node scripts/intent-parser.js",
     "scenic": "node scripts/scenic-data-fetcher.js",
     "route": "node scripts/route-optimizer.js",
@@ -15,14 +17,19 @@
   },
   "dependencies": {
     "axios": "^1.13.6",
-    "express": "^5.2.1"
+    "docx": "^8.5.0",
+    "express": "^5.2.1",
+    "sharp": "^0.33.5"
   },
   "keywords": [
     "amap",
     "tourism",
+    "site-selection",
     "route-planning",
     "llm",
-    "visualization"
+    "visualization",
+    "restaurant",
+    "docx"
   ],
   "license": "MIT"
 }

@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>餐饮选址通 - 选址分析报告</title>
+  <style>
+    /* ========== 全局变量与重置 ========== */
+    :root {
+      --primary: #1890ff;
+      --primary-light: #e6f7ff;
+      --primary-dark: #096dd9;
+      --success: #52c41a;
+      --success-light: #f6ffed;
+      --warning: #fa8c16;
+      --warning-light: #fff7e6;
+      --danger: #f5222d;
+      --danger-light: #fff1f0;
+      --text-primary: #1f1f1f;
+      --text-secondary: #595959;
+      --text-muted: #8c8c8c;
+      --bg: #f5f5f5;
+      --card-bg: #ffffff;
+      --border: #f0f0f0;
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+        'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ========== 顶部导航 ========== */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 60px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 1000;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-logo {
+      width: 36px; height: 36px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      backdrop-filter: blur(8px);
+    }
+
+    .header-title {
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .header-subtitle {
+      color: rgba(255,255,255,0.6);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-badge {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      padding: 4px 14px;
+      color: rgba(255,255,255,0.85);
+      font-size: 12px;
+      backdrop-filter: blur(8px);
+    }
+
+    /* ========== 主体布局: 左40% + 右60% ========== */
+    .main-container {
+      display: flex;
+      height: 100vh;
+      padding-top: 60px;
+    }
+
+    .left-panel {
+      width: 40%;
+      min-width: 380px;
+      max-width: 560px;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+    }
+
+    .left-panel::-webkit-scrollbar { width: 5px; }
+    .left-panel::-webkit-scrollbar-thumb { background: #d9d9d9; border-radius: 4px; }
+
+    .right-panel {
+      flex: 1;
+      height: 100%;
+      position: relative;
+    }
+
+    #mapView { width: 100%; height: 100%; }
+
+    /* ========== 左侧面板内容 ========== */
+    .panel-content { padding: 20px; }
+
+    /* --- 区域标题栏 --- */
+    .area-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .area-tab {
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+
+    .area-tab:hover { border-color: var(--primary); color: var(--primary); }
+
+    .area-tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .area-tab.best::after {
+      content: '\u2605';
+      margin-left: 4px;
+      color: #faad14;
+    }
+
+    .area-tab.active.best::after { color: #fff; }
+
+    /* --- 通用卡片 --- */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-body { padding: 20px; }
+
+    /* ========== 评分仪表盘 ========== */
+    .score-hero {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .score-number-wrap {
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .score-number {
+      font-size: 48px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .score-number .score-max {
+      font-size: 18px;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    .score-grade {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .grade-excellent { background: var(--success-light); color: var(--success); }
+    .grade-good { background: var(--primary-light); color: var(--primary); }
+    .grade-pass { background: var(--warning-light); color: var(--warning); }
+    .grade-fail { background: var(--danger-light); color: var(--danger); }
+
+    .color-excellent { color: var(--success); }
+    .color-good { color: var(--primary); }
+    .color-pass { color: var(--warning); }
+    .color-fail { color: var(--danger); }
+
+    /* --- SVG 雷达图 --- */
+    .radar-wrap {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .radar-wrap svg { max-width: 220px; max-height: 220px; }
+
+    /* ========== 竞争密度卡片 ========== */
+    .ring-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .ring-item {
+      background: #fafafa;
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+    }
+
+    .ring-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .ring-values {
+      display: flex;
+      gap: 12px;
+    }
+
+    .ring-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .ring-val small {
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    /* --- 菜系分布条形图 --- */
+    .cuisine-bars { margin-top: 4px; }
+
+    .cuisine-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .cuisine-name {
+      width: 60px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: right;
+      flex-shrink: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cuisine-bar-track {
+      flex: 1;
+      height: 14px;
+      background: #f5f5f5;
+      border-radius: 7px;
+      overflow: hidden;
+    }
+
+    .cuisine-bar-fill {
+      height: 100%;
+      border-radius: 7px;
+      transition: width 0.6s ease;
+    }
+
+    .cuisine-count {
+      width: 32px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+      flex-shrink: 0;
+    }
+
+    /* ========== 区域画像卡片 ========== */
+    .profile-badges {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .profile-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-commercial { background: var(--primary-light); color: var(--primary); }
+    .badge-mixed { background: #f9f0ff; color: #722ed1; }
+    .badge-residential { background: var(--success-light); color: var(--success); }
+
+    .score-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .score-bar-label {
+      width: 70px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .score-bar-track {
+      flex: 1;
+      height: 10px;
+      background: #f0f0f0;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 5px;
+      transition: width 0.6s ease;
+    }
+
+    .score-bar-value {
+      width: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      flex-shrink: 0;
+    }
+
+    .narrative-text {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ========== 多区域对比卡片 ========== */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .compare-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      position: relative;
+      background: #fafafa;
+    }
+
+    .compare-card.top-pick {
+      border-color: var(--success);
+      background: var(--success-light);
+    }
+
+    .top-pick-badge {
+      position: absolute;
+      top: -1px; right: -1px;
+      background: var(--success);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 0 var(--radius-sm) 0 var(--radius-sm);
+    }
+
+    .compare-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .compare-score {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .compare-dims { font-size: 12px; color: var(--text-secondary); }
+
+    .compare-dim-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px dashed #eee;
+    }
+
+    .compare-dim-row:last-child { border-bottom: none; }
+
+    .compare-dim-val { font-weight: 600; color: var(--text-primary); }
+
+    /* ========== LLM 推荐卡片 ========== */
+    .llm-text {
+      font-size: 14px;
+      color: var(--text-primary);
+      line-height: 1.9;
+      white-space: pre-wrap;
+    }
+
+    .llm-text p { margin-bottom: 10px; }
+
+    /* ========== 模板预览消息 ========== */
+    .template-preview {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      text-align: center;
+      padding: 40px;
+    }
+
+    .template-preview h1 {
+      font-size: 28px;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .template-preview p {
+      font-size: 15px;
+      color: var(--text-secondary);
+      max-width: 480px;
+      line-height: 1.7;
+    }
+
+    .template-preview .preview-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    .template-preview .placeholder-list {
+      margin-top: 20px;
+      text-align: left;
+      background: rgba(255,255,255,0.7);
+      border-radius: var(--radius);
+      padding: 20px 28px;
+    }
+
+    .template-preview code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'SF Mono', 'Consolas', monospace;
+    }
+
+    /* ========== 加载动画 ========== */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+    }
+
+    .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .loading-spinner {
+      width: 44px; height: 44px;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* ========== 地图信息窗口 ========== */
+    .map-popup { min-width: 200px; padding: 12px 16px; }
+    .map-popup-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary); }
+    .map-popup-row { font-size: 12px; color: var(--text-secondary); margin-bottom: 3px; }
+    .map-popup-row strong { color: var(--text-primary); }
+
+    /* ========== 自定义地图标记 ========== */
+    .site-marker {
+      width: 32px; height: 32px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    .site-marker-inner {
+      transform: rotate(45deg);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .marker-competition {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      font-size: 10px;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .marker-same { background: var(--danger); }
+    .marker-other { background: var(--warning); }
+    .marker-complement { background: var(--success); }
+
+    /* ========== 地图图例 ========== */
+    .map-legend {
+      position: absolute;
+      bottom: 24px; left: 24px;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      box-shadow: var(--shadow-md);
+      z-index: 100;
+      font-size: 12px;
+    }
+
+    .legend-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-primary);
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      color: var(--text-secondary);
+    }
+
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .legend-circle {
+      width: 18px; height: 10px;
+      border-radius: 5px;
+      flex-shrink: 0;
+      border: 1px solid;
+      opacity: 0.5;
+    }
+
+    /* ========== 移动端适配 ========== */
+    @media (max-width: 900px) {
+      .main-container { flex-direction: column; }
+      .left-panel {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        height: 50vh;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+      }
+      .right-panel { height: 50vh; }
+      .map-legend { bottom: 12px; left: 12px; padding: 8px 12px; font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 加载遮罩 -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在加载分析报告...</div>
+  </div>
+
+  <!-- 模板预览（占位符未替换时显示） -->
+  <div class="template-preview" id="templatePreview" style="display:none;">
+    <div class="preview-icon">&#x1F4CA;</div>
+    <h1>餐饮选址通 &middot; 选址分析报告</h1>
+    <p>这是报告模板预览页面。当数据占位符被实际分析结果替换后，将显示完整的交互式选址分析报告。</p>
+    <div class="placeholder-list">
+      <p style="margin-bottom:8px;"><strong>需要替换的占位符：</strong></p>
+      <p><code>__SITE_DATA__</code> &mdash; 选址分析 JSON 数据</p>
+      <p><code>__AMAP_KEY__</code> &mdash; 高德地图 JSAPI Key</p>
+      <p><code>__SECURITY_CODE__</code> &mdash; 高德安全密钥</p>
+    </div>
+  </div>
+
+  <!-- 主应用（数据就绪时显示） -->
+  <div id="appRoot" style="display:none;">
+
+    <!-- 顶部导航 -->
+    <header class="header">
+      <div class="header-left">
+        <div class="header-logo">&#x1F4CA;</div>
+        <div>
+          <div class="header-title">餐饮选址通 &middot; 选址分析报告</div>
+          <div class="header-subtitle" id="headerTimestamp"></div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="header-badge" id="headerIntent"></div>
+      </div>
+    </header>
+
+    <!-- 主体 -->
+    <div class="main-container">
+
+      <!-- 左侧数据面板 -->
+      <div class="left-panel" id="leftPanel">
+        <div class="panel-content" id="panelContent">
+          <!-- JS 动态渲染 -->
+        </div>
+      </div>
+
+      <!-- 右侧地图面板 -->
+      <div class="right-panel">
+        <div id="mapView"></div>
+        <div class="map-legend" id="mapLegend">
+          <div class="legend-title">图例</div>
+          <div class="legend-row"><div class="legend-dot" style="background:var(--primary);"></div> 选址中心</div>
+          <div class="legend-row"><div class="legend-dot marker-same" style="width:10px;height:10px;"></div> 同类竞品</div>
+          <div class="legend-row"><div class="legend-dot marker-other" style="width:10px;height:10px;"></div> 其他餐饮</div>
+          <div class="legend-row"><div class="legend-dot marker-complement" style="width:10px;height:10px;"></div> 互补业态</div>
+          <div class="legend-row"><div class="legend-circle" style="background:rgba(245,34,45,0.15);border-color:rgba(245,34,45,0.4);"></div> 150m 核心圈</div>
+          <div class="legend-row"><div class="legend-circle" style="background:rgba(250,140,22,0.1);border-color:rgba(250,140,22,0.3);"></div> 500m 内圈</div>
+          <div class="legend-row"><div class="legend-circle" style="background:rgba(24,144,255,0.08);border-color:rgba(24,144,255,0.2);"></div> 1km 外圈</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 高德地图安全配置 + JSAPI v2.0 -->
+  <script type="text/javascript">
+    window._AMapSecurityConfig = {
+      securityJsCode: '__SECURITY_CODE__'
+    };
+  </script>
+  <script src="https://webapi.amap.com/maps?v=2.0&key=__AMAP_KEY__"></script>
+
+  <script>
+  // ============================================================
+  // 餐饮选址通 - 交互式选址分析报告
+  // ============================================================
+
+  // ---- 数据注入 ----
+  var RAW_DATA = '__SITE_DATA__';
+  var AMAP_KEY = '__AMAP_KEY__';
+
+  // 检测模板模式
+  var isTemplateMode = (typeof RAW_DATA === 'string' && RAW_DATA.indexOf('__SITE_DATA__') !== -1);
+
+  if (isTemplateMode) {
+    document.getElementById('templatePreview').style.display = 'flex';
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  } else {
+    var siteData = (typeof RAW_DATA === 'string') ? JSON.parse(RAW_DATA) : RAW_DATA;
+    document.getElementById('appRoot').style.display = 'block';
+    boot();
+  }
+
+  // ============================================================
+  // 主启动函数
+  // ============================================================
+  function boot() {
+    renderHeader();
+    renderPanel();
+    initMap();
+    setTimeout(function () {
+      document.getElementById('loadingOverlay').classList.add('hidden');
+    }, 500);
+  }
+
+  // ============================================================
+  // 头部
+  // ============================================================
+  function renderHeader() {
+    var ts = siteData.generated_at || '';
+    if (ts) {
+      try {
+        var d = new Date(ts);
+        ts = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+             ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      } catch(e) {}
+      document.getElementById('headerTimestamp').textContent = '生成时间: ' + ts;
+    }
+    var intent = siteData.intent || {};
+    var parts = [];
+    if (intent.restaurant_type) parts.push(intent.restaurant_type);
+    if (intent.city) parts.push(intent.city);
+    if (intent.store_type) parts.push(intent.store_type);
+    document.getElementById('headerIntent').textContent = parts.join(' | ');
+  }
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  // ============================================================
+  // 左侧面板渲染
+  // ============================================================
+  function renderPanel() {
+    var areas = siteData.areas || [];
+    var panel = document.getElementById('panelContent');
+    var html = '';
+
+    // 区域选择标签 (多区域时)
+    if (areas.length > 1) {
+      html += '<div class="area-selector" id="areaSelector">';
+      areas.forEach(function (a, i) {
+        var best = (siteData.comparison && siteData.comparison.best &&
+                    siteData.comparison.best.area_name === a.area_name) ? ' best' : '';
+        html += '<div class="area-tab' + (i === 0 ? ' active' : '') + best +
+                '" data-area="' + i + '" onclick="switchArea(' + i + ')">' +
+                esc(a.area_name) + '</div>';
+      });
+      html += '</div>';
+    }
+
+    // 每个区域的内容容器
+    areas.forEach(function (a, i) {
+      html += '<div class="area-section" id="areaSection' + i + '" style="' +
+              (i > 0 ? 'display:none' : '') + '">';
+      html += renderScoreCard(a, i);
+      html += renderCompetitionCard(a, i);
+      html += renderProfileCard(a, i);
+      html += '</div>';
+    });
+
+    // 多区域对比
+    if (areas.length > 1 && siteData.comparison) {
+      html += renderComparisonCard();
+    }
+
+    // LLM 推荐
+    if (siteData.recommendation) {
+      html += renderLLMCard();
+    }
+
+    panel.innerHTML = html;
+  }
+
+  // ---- 切换区域 ----
+  window.switchArea = function (idx) {
+    document.querySelectorAll('.area-tab').forEach(function (t) { t.classList.remove('active'); });
+    document.querySelector('.area-tab[data-area="' + idx + '"]').classList.add('active');
+    document.querySelectorAll('.area-section').forEach(function (s) { s.style.display = 'none'; });
+    document.getElementById('areaSection' + idx).style.display = 'block';
+
+    // 地图联动
+    if (mapInstance && siteData.areas[idx]) {
+      var c = siteData.areas[idx].center;
+      mapInstance.setZoomAndCenter(15, [c.lng, c.lat], false, 500);
+    }
+  };
+
+  // ============================================================
+  // 评分卡片 (含雷达图)
+  // ============================================================
+  function renderScoreCard(area, idx) {
+    var score = area.score || {};
+    var total = score.total || 0;
+    var grade = score.grade || '';
+    var breakdown = score.breakdown || {};
+
+    // 颜色与等级
+    var colorClass, gradeClass, gradeLabel;
+    if (total > 90)      { colorClass = 'color-excellent'; gradeClass = 'grade-excellent'; gradeLabel = grade || '优秀'; }
+    else if (total >= 80) { colorClass = 'color-good';      gradeClass = 'grade-good';      gradeLabel = grade || '良好'; }
+    else if (total >= 60) { colorClass = 'color-pass';      gradeClass = 'grade-pass';      gradeLabel = grade || '及格'; }
+    else                  { colorClass = 'color-fail';       gradeClass = 'grade-fail';      gradeLabel = grade || '不推荐'; }
+
+    var radarSvg = buildRadarChart(breakdown);
+
+    return '<div class="card">' +
+      '<div class="card-header">&#x1F3AF; 综合评分</div>' +
+      '<div class="card-body">' +
+        '<div class="score-hero">' +
+          '<div class="score-number-wrap">' +
+            '<div class="score-number ' + colorClass + '">' + total +
+              '<span class="score-max">/100</span></div>' +
+            '<div class="score-grade ' + gradeClass + '">' + gradeLabel + '</div>' +
+          '</div>' +
+          '<div class="radar-wrap">' + radarSvg + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ============================================================
+  // SVG 雷达图（纯数学计算，五边形）
+  // ============================================================
+  function buildRadarChart(breakdown) {
+    var axes = [
+      { label: '战略', key: 'strategic', max: 20 },
+      { label: '竞争', key: 'competition', max: 20 },
+      { label: '销售', key: 'sales', max: 20 },
+      { label: '配套', key: 'service', max: 20 },
+      { label: '立地', key: 'conditions', max: 20 }
+    ];
+
+    var cx = 120, cy = 120, R = 90;
+    var levels = 3;
+    var n = axes.length;
+    var angleStep = (2 * Math.PI) / n;
+    var startAngle = -Math.PI / 2; // 从顶部开始
+
+    // 辅助函数：根据角度和半径求点坐标
+    function pt(angle, r) {
+      return {
+        x: cx + r * Math.cos(angle),
+        y: cy + r * Math.sin(angle)
+      };
+    }
+
+    // 生成多边形点字符串
+    function polyPoints(radius) {
+      var pts = [];
+      for (var i = 0; i < n; i++) {
+        var p = pt(startAngle + i * angleStep, radius);
+        pts.push(p.x.toFixed(1) + ',' + p.y.toFixed(1));
+      }
+      return pts.join(' ');
+    }
+
+    var svg = '<svg viewBox="0 0 240 240" width="220" height="220" xmlns="http://www.w3.org/2000/svg">';
+
+    // 网格（3 层同心五边形）
+    for (var lv = 1; lv <= levels; lv++) {
+      var r = (R / levels) * lv;
+      svg += '<polygon points="' + polyPoints(r) +
+        '" fill="none" stroke="#e8e8e8" stroke-width="1"/>';
+    }
+
+    // 轴线
+    for (var i = 0; i < n; i++) {
+      var ep = pt(startAngle + i * angleStep, R);
+      svg += '<line x1="' + cx + '" y1="' + cy +
+        '" x2="' + ep.x.toFixed(1) + '" y2="' + ep.y.toFixed(1) +
+        '" stroke="#d9d9d9" stroke-width="1"/>';
+    }
+
+    // 数据多边形
+    var dataPts = [];
+    for (var i = 0; i < n; i++) {
+      var val = breakdown[axes[i].key] || 0;
+      var r = (val / axes[i].max) * R;
+      var p = pt(startAngle + i * angleStep, r);
+      dataPts.push(p.x.toFixed(1) + ',' + p.y.toFixed(1));
+    }
+    svg += '<polygon points="' + dataPts.join(' ') +
+      '" fill="rgba(24,144,255,0.2)" stroke="#1890ff" stroke-width="2"/>';
+
+    // 数据点
+    for (var i = 0; i < n; i++) {
+      var val = breakdown[axes[i].key] || 0;
+      var r = (val / axes[i].max) * R;
+      var p = pt(startAngle + i * angleStep, r);
+      svg += '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) +
+        '" r="4" fill="#1890ff" stroke="#fff" stroke-width="2"/>';
+    }
+
+    // 标签
+    for (var i = 0; i < n; i++) {
+      var lp = pt(startAngle + i * angleStep, R + 20);
+      var val = breakdown[axes[i].key] || 0;
+      var anchor = 'middle';
+      if (lp.x < cx - 5) anchor = 'end';
+      else if (lp.x > cx + 5) anchor = 'start';
+      svg += '<text x="' + lp.x.toFixed(1) + '" y="' + (lp.y + 4).toFixed(1) +
+        '" text-anchor="' + anchor + '" font-size="11" fill="#595959">' +
+        axes[i].label + ' ' + val + '</text>';
+    }
+
+    svg += '</svg>';
+    return svg;
+  }
+
+  // ============================================================
+  // 竞争密度卡片
+  // ============================================================
+  function renderCompetitionCard(area, idx) {
+    var comp = area.competition || {};
+    var rings = comp.rings || {};
+
+    var ringDefs = [
+      { key: 'core',  label: '150m 核心圈' },
+      { key: 'inner', label: '500m 内圈' },
+      { key: 'outer', label: '1km 外圈' },
+      { key: 'wide',  label: '3km 广域' }
+    ];
+
+    var ringHtml = '<div class="ring-grid">';
+    ringDefs.forEach(function (rd) {
+      var ring = rings[rd.key] || {};
+      var fc = ring.food_count || 0;
+      var dc = ring.drink_count || 0;
+      ringHtml += '<div class="ring-item">' +
+        '<div class="ring-label">' + rd.label + '</div>' +
+        '<div class="ring-values">' +
+          '<div class="ring-val">' + fc + '<small> 餐饮</small></div>' +
+          '<div class="ring-val">' + dc + '<small> 饮品</small></div>' +
+        '</div></div>';
+    });
+    ringHtml += '</div>';
+
+    // 菜系分布（取核心圈或内圈的 cuisine_breakdown）
+    var cuisineData = (rings.core && rings.core.cuisine_breakdown) ||
+                      (rings.inner && rings.inner.cuisine_breakdown) || {};
+    var cuisineEntries = [];
+    for (var name in cuisineData) {
+      if (cuisineData.hasOwnProperty(name)) {
+        cuisineEntries.push({ name: name, count: cuisineData[name] });
+      }
+    }
+    cuisineEntries.sort(function (a, b) { return b.count - a.count; });
+
+    var barColors = ['#1890ff', '#52c41a', '#fa8c16', '#f5222d', '#722ed1',
+                     '#13c2c2', '#eb2f96', '#faad14', '#2f54eb', '#a0d911'];
+    var maxCount = cuisineEntries.length > 0 ? cuisineEntries[0].count : 1;
+
+    var barsHtml = '';
+    if (cuisineEntries.length > 0) {
+      barsHtml = '<div style="margin-top:14px;font-size:13px;font-weight:600;margin-bottom:10px;">菜系分布</div>';
+      barsHtml += '<div class="cuisine-bars">';
+      cuisineEntries.slice(0, 8).forEach(function (c, i) {
+        var pct = Math.max(4, (c.count / maxCount) * 100);
+        barsHtml += '<div class="cuisine-row">' +
+          '<div class="cuisine-name">' + esc(c.name) + '</div>' +
+          '<div class="cuisine-bar-track">' +
+            '<div class="cuisine-bar-fill" style="width:' + pct.toFixed(0) +
+            '%;background:' + barColors[i % barColors.length] + ';"></div>' +
+          '</div>' +
+          '<div class="cuisine-count">' + c.count + '</div>' +
+        '</div>';
+      });
+      barsHtml += '</div>';
+    }
+
+    return '<div class="card">' +
+      '<div class="card-header">&#x1F3EA; 竞争密度</div>' +
+      '<div class="card-body">' + ringHtml + barsHtml + '</div>' +
+    '</div>';
+  }
+
+  // ============================================================
+  // 区域画像卡片
+  // ============================================================
+  function renderProfileCard(area, idx) {
+    var profile = area.profile || {};
+    var areaType = profile.areaType || '';
+    var transit = profile.transitScore || 0;
+    var complement = profile.complementaryScore || 0;
+    var narrative = profile.narrative || '';
+
+    // 区域类型 badge
+    var badgeClass = 'badge-mixed';
+    if (areaType.indexOf('商') !== -1) badgeClass = 'badge-commercial';
+    else if (areaType.indexOf('住') !== -1) badgeClass = 'badge-residential';
+
+    var html = '<div class="card">' +
+      '<div class="card-header">&#x1F3D9; 区域画像</div>' +
+      '<div class="card-body">';
+
+    if (areaType) {
+      html += '<div class="profile-badges">' +
+        '<span class="profile-badge ' + badgeClass + '">' + esc(areaType) + '</span>' +
+      '</div>';
+    }
+
+    // 交通便利度
+    html += buildScoreBar('交通便利', transit, 10, 'var(--primary)');
+    // 互补配套
+    html += buildScoreBar('互补配套', complement, 10, 'var(--success)');
+
+    if (narrative) {
+      html += '<div class="narrative-text">' + esc(narrative) + '</div>';
+    }
+
+    html += '</div></div>';
+    return html;
+  }
+
+  function buildScoreBar(label, value, max, color) {
+    var pct = Math.min(100, (value / max) * 100);
+    return '<div class="score-bar-row">' +
+      '<div class="score-bar-label">' + label + '</div>' +
+      '<div class="score-bar-track">' +
+        '<div class="score-bar-fill" style="width:' + pct.toFixed(0) +
+        '%;background:' + color + ';"></div>' +
+      '</div>' +
+      '<div class="score-bar-value">' + value + '</div>' +
+    '</div>';
+  }
+
+  // ============================================================
+  // 多区域对比卡片
+  // ============================================================
+  function renderComparisonCard() {
+    var comp = siteData.comparison || {};
+    var ranking = comp.ranking || [];
+    var best = comp.best || {};
+    var areas = siteData.areas || [];
+
+    var html = '<div class="card">' +
+      '<div class="card-header">&#x1F4CA; 多区域对比</div>' +
+      '<div class="card-body">' +
+      '<div class="comparison-grid">';
+
+    ranking.forEach(function (r) {
+      var isTop = (r.area_name === best.area_name);
+      var areaObj = areas.find(function (a) { return a.area_name === r.area_name; });
+      var score = areaObj ? (areaObj.score || {}) : {};
+      var breakdown = score.breakdown || {};
+
+      html += '<div class="compare-card' + (isTop ? ' top-pick' : '') + '">';
+      if (isTop) html += '<div class="top-pick-badge">推荐首选</div>';
+      html += '<div class="compare-name">' + esc(r.area_name) + '</div>';
+
+      var total = score.total || r.total || 0;
+      var colorClass = total > 90 ? 'color-excellent' : total >= 80 ? 'color-good' :
+                       total >= 60 ? 'color-pass' : 'color-fail';
+      html += '<div class="compare-score ' + colorClass + '">' + total + '</div>';
+
+      html += '<div class="compare-dims">';
+      var dimLabels = { strategic: '战略', competition: '竞争', sales: '销售', service: '配套', conditions: '立地' };
+      for (var key in dimLabels) {
+        var val = breakdown[key] || 0;
+        html += '<div class="compare-dim-row">' +
+          '<span>' + dimLabels[key] + '</span>' +
+          '<span class="compare-dim-val">' + val + '/20</span></div>';
+      }
+      html += '</div></div>';
+    });
+
+    html += '</div></div></div>';
+    return html;
+  }
+
+  // ============================================================
+  // LLM 推荐卡片
+  // ============================================================
+  function renderLLMCard() {
+    var text = siteData.recommendation || '';
+    // 简单段落分割
+    var paragraphs = text.split(/\n\s*\n/).filter(function (p) { return p.trim(); });
+    var inner = paragraphs.map(function (p) {
+      return '<p>' + esc(p.trim()) + '</p>';
+    }).join('');
+
+    return '<div class="card">' +
+      '<div class="card-header">&#x1F4A1; AI 选址建议</div>' +
+      '<div class="card-body"><div class="llm-text">' + inner + '</div></div>' +
+    '</div>';
+  }
+
+  // ============================================================
+  // 高德地图初始化
+  // ============================================================
+  var mapInstance = null;
+  var mapInfoWindow = null;
+
+  function initMap() {
+    try {
+      var AMap = window.AMap;
+      if (!AMap) {
+        console.warn('高德地图 JSAPI 未加载');
+        document.getElementById('mapLegend').style.display = 'none';
+        return;
+      }
+
+      mapInstance = new AMap.Map('mapView', {
+        zoom: 15,
+        viewMode: '2D',
+        mapStyle: 'amap://styles/whitesmoke',
+        resizeEnable: true
+      });
+
+      mapInfoWindow = new AMap.InfoWindow({
+        offset: new AMap.Pixel(0, -36),
+        closeWhenClickMap: true,
+        isCustom: false
+      });
+
+      renderMapOverlays(AMap);
+      autoFitMap();
+
+    } catch (err) {
+      console.error('地图初始化失败:', err);
+    }
+  }
+
+  // ============================================================
+  // 地图覆盖物（中心标记 + 同心圆 + 竞品标记）
+  // ============================================================
+  function renderMapOverlays(AMap) {
+    var areas = siteData.areas || [];
+
+    areas.forEach(function (area, ai) {
+      var center = area.center;
+      if (!center || !center.lng || !center.lat) return;
+      var pos = new AMap.LngLat(center.lng, center.lat);
+
+      // ---- 同心圆 ----
+      var circleDefs = [
+        { radius: 150,  strokeColor: '#f5222d', fillColor: '#f5222d', strokeOpacity: 0.5, fillOpacity: 0.08, weight: 2 },
+        { radius: 500,  strokeColor: '#fa8c16', fillColor: '#fa8c16', strokeOpacity: 0.4, fillOpacity: 0.05, weight: 1.5 },
+        { radius: 1000, strokeColor: '#1890ff', fillColor: '#1890ff', strokeOpacity: 0.3, fillOpacity: 0.03, weight: 1 }
+      ];
+
+      circleDefs.forEach(function (cd) {
+        new AMap.Circle({
+          center: pos,
+          radius: cd.radius,
+          strokeColor: cd.strokeColor,
+          strokeWeight: cd.weight,
+          strokeOpacity: cd.strokeOpacity,
+          fillColor: cd.fillColor,
+          fillOpacity: cd.fillOpacity,
+          strokeStyle: 'dashed',
+          map: mapInstance
+        });
+      });
+
+      // ---- 中心标记 ----
+      var markerEl = document.createElement('div');
+      markerEl.className = 'site-marker';
+      markerEl.style.background = 'linear-gradient(135deg, #1890ff, #096dd9)';
+      markerEl.innerHTML = '<span class="site-marker-inner">' + (ai + 1) + '</span>';
+
+      var centerMarker = new AMap.Marker({
+        position: pos,
+        content: markerEl,
+        offset: new AMap.Pixel(-16, -32),
+        map: mapInstance
+      });
+
+      centerMarker.on('click', function () {
+        var content = '<div class="map-popup">' +
+          '<div class="map-popup-title">' + esc(area.area_name) + '</div>' +
+          '<div class="map-popup-row">综合评分: <strong>' + (area.score ? area.score.total : '-') + '/100</strong></div>' +
+          (area.score && area.score.grade ? '<div class="map-popup-row">评级: <strong>' + esc(area.score.grade) + '</strong></div>' : '') +
+        '</div>';
+        mapInfoWindow.setContent(content);
+        mapInfoWindow.open(mapInstance, pos);
+      });
+
+      // ---- 竞争 POI 标记 ----
+      renderCompetitionMarkers(AMap, area, pos);
+    });
+  }
+
+  function renderCompetitionMarkers(AMap, area, centerPos) {
+    var comp = area.competition || {};
+    var rings = comp.rings || {};
+    var poiList = comp.pois || comp.poi_list || [];
+
+    // 如果数据里有 poi 列表就直接渲染
+    if (Array.isArray(poiList) && poiList.length > 0) {
+      poiList.forEach(function (poi) {
+        if (!poi.lng || !poi.lat) return;
+        var poiPos = new AMap.LngLat(poi.lng, poi.lat);
+
+        var typeClass = 'marker-other';
+        if (poi.category === 'same' || poi.type === 'same') typeClass = 'marker-same';
+        else if (poi.category === 'complement' || poi.type === 'complement') typeClass = 'marker-complement';
+
+        var el = document.createElement('div');
+        el.className = 'marker-competition ' + typeClass;
+        el.textContent = (poi.name || '?').charAt(0);
+
+        var m = new AMap.Marker({
+          position: poiPos,
+          content: el,
+          offset: new AMap.Pixel(-11, -11),
+          map: mapInstance
+        });
+
+        m.on('click', function () {
+          var cuisine = poi.cuisine || poi.cuisine_type || '-';
+          var rating = poi.rating || '-';
+          var cost = poi.avg_cost || poi.cost || '-';
+          var content = '<div class="map-popup">' +
+            '<div class="map-popup-title">' + esc(poi.name) + '</div>' +
+            '<div class="map-popup-row">菜系: <strong>' + esc(cuisine) + '</strong></div>' +
+            '<div class="map-popup-row">评分: <strong>' + rating + '</strong></div>' +
+            '<div class="map-popup-row">人均: <strong>' + cost + ' 元</strong></div>' +
+          '</div>';
+          mapInfoWindow.setContent(content);
+          mapInfoWindow.open(mapInstance, poiPos);
+        });
+      });
+    }
+  }
+
+  // ============================================================
+  // 自动适配地图视野
+  // ============================================================
+  function autoFitMap() {
+    if (!mapInstance) return;
+    var areas = siteData.areas || [];
+    if (areas.length === 0) return;
+
+    if (areas.length === 1) {
+      var c = areas[0].center;
+      if (c) mapInstance.setZoomAndCenter(15, [c.lng, c.lat]);
+      return;
+    }
+
+    // 多区域：用 setFitView 展示全部
+    var lngLats = [];
+    areas.forEach(function (a) {
+      if (a.center) lngLats.push(new AMap.LngLat(a.center.lng, a.center.lat));
+    });
+    if (lngLats.length > 0) {
+      mapInstance.setBounds(new AMap.Bounds(
+        new AMap.LngLat(
+          Math.min.apply(null, lngLats.map(function(l){return l.getLng();})) - 0.01,
+          Math.min.apply(null, lngLats.map(function(l){return l.getLat();})) - 0.01
+        ),
+        new AMap.LngLat(
+          Math.max.apply(null, lngLats.map(function(l){return l.getLng();})) + 0.01,
+          Math.max.apply(null, lngLats.map(function(l){return l.getLat();})) + 0.01
+        )
+      ), false, [60, 60, 60, 60]);
+    }
+  }
+
+  // ============================================================
+  // 工具函数
+  // ============================================================
+  function esc(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  </script>
+</body>
+</html>
