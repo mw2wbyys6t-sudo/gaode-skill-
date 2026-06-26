@@ -110,6 +110,8 @@
 - Python 3.8+（语音功能可选）
 - 高德 API Key（[免费申请](https://lbs.amap.com/)）
 - LLM API Key（推荐 DeepSeek，可选）
+ -注意在创建高德API一定要选择web服务的。
+  
 
 ### 安装
 
@@ -348,6 +350,7 @@ npm run tts         # 启动 TTS 语音服务
 本项目可作为 QoderWork Skill 安装使用。下载 `.skill` 文件后，在 QoderWork 中点击安装即可。安装后可通过自然语言直接与 AI 对话进行旅游规划或餐饮选址分析。
 
 Skill 支持的对话场景包括：POI 搜索、路径规划、周边搜索、热力图数据、旅游规划、美食发现、AI 旅伴聊天、语音导览、旅行手账、餐饮选址分析等 12 个场景。
+
 
 ## 许可证
 
