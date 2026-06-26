@@ -13,7 +13,7 @@
   "llmEndpoint": "https://api.deepseek.com/v1/chat/completions",
   "llmApiKey": "LLM API 密钥（DeepSeek/OpenAI 兼容格式）",
   "llmModel": "deepseek-chat",
-  "appname": "smart-tourism-planner"
+  "appname": "gaode-map-lbs"
 }
 ```
 

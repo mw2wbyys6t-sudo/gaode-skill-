@@ -47,8 +47,11 @@ app.use((req, res, next) => {
 // --- favicon 兜底（避免浏览器自动请求 404） ---
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// --- 静态文件服务 ---
-app.use(express.static(__dirname));
+// --- 静态文件服务（仅暴露前端资源，防止 scripts/node_modules 泄露） ---
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/templates', express.static(path.join(__dirname, 'templates')));
+app.use('/output', express.static(path.join(__dirname, 'output')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.use(express.json({ limit: '1mb' }));
 
 // --- CORS (开发用) ---

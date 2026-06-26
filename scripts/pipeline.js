@@ -457,7 +457,7 @@ async function runMultiDayPipeline(userInput, intent, config, options) {
         to_city: nextDay.city,
         from_day: i + 1,
         to_day: i + 2,
-        transport: travelMin <= 60 ? 'train' : 'train',
+        transport: travelMin <= 180 ? 'train' : 'flight',
         estimated_min: travelMin,
       });
     }
@@ -727,16 +727,16 @@ async function runPipeline(userInput, options = {}) {
 
   // 如果用户指定了 --open，尝试在浏览器中打开
   if (options.open) {
-    const { exec } = require('child_process');
+    const { spawn } = require('child_process');
     const absPath  = path.resolve(outputPath);
     const cmd = process.platform === 'darwin'
-      ? `open "${absPath}"`
+      ? 'open'
       : process.platform === 'win32'
-        ? `start "" "${absPath}"`
-        : `xdg-open "${absPath}"`;
-    exec(cmd, (err) => {
-      if (err) console.warn('⚠️  无法自动打开浏览器:', err.message);
-    });
+        ? 'start'
+        : 'xdg-open';
+    const args = process.platform === 'win32' ? ['', absPath] : [absPath];
+    const child = spawn(cmd, args, { detached: true, stdio: 'ignore', shell: process.platform === 'win32' });
+    child.unref();
   }
 
   return summary;

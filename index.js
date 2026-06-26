@@ -71,12 +71,12 @@ function saveConfig(config) {
  */
 function getWebServiceKey() {
   const config = readConfig();
-  return config.webServiceKey || null;
+  return config.amapWebServiceKey || config.webServiceKey || null;
 }
 
 function getOverseasWebServiceKey() {
   const config = readConfig();
-  return config.overseasWebServiceKey || null;
+  return config.amapOverseasWebServiceKey || config.overseasWebServiceKey || null;
 }
 
 function normalizeUserRegion(value) {

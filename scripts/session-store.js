@@ -24,6 +24,7 @@ const sessions = new Map();
 const DEFAULT_MAX_HISTORY = 20;   // 保留最近 N 轮对话
 const DEFAULT_MAX_AGE_MS  = 2 * 60 * 60 * 1000; // 2小时过期
 const CLEANUP_INTERVAL_MS = 30 * 60 * 1000;      // 每30分钟清理一次
+const MAX_SESSIONS        = 500;                  // 最大会话数量
 
 
 // ============================================================
@@ -46,6 +47,23 @@ function getOrCreateSession(sessionId) {
 
   let session = sessions.get(sessionId);
   if (!session) {
+    // 超限时淘汰最旧的会话
+    if (sessions.size >= MAX_SESSIONS) {
+      let oldestId = null;
+      let oldestTime = Infinity;
+      for (const [id, s] of sessions.entries()) {
+        const t = s.lastActive.getTime();
+        if (t < oldestTime) {
+          oldestTime = t;
+          oldestId = id;
+        }
+      }
+      if (oldestId) {
+        sessions.delete(oldestId);
+        console.log(`[会话存储] 会话数超限(${MAX_SESSIONS})，已淘汰最旧会话: ${oldestId}`);
+      }
+    }
+
     session = {
       _id:          sessionId,     // v2: 暴露解析后的真实 ID
       createdAt:  new Date(),

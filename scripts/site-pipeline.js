@@ -26,7 +26,6 @@
 
 const path = require('path');
 const fs   = require('fs');
-const { exec } = require('child_process');
 
 // ---------- 导入选址子模块 ----------
 const { parseSiteIntent }      = require('./site-intent-parser');
@@ -47,6 +46,25 @@ const STAGE_DELAY = 500;
 /** 延迟指定毫秒数 */
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * 重试异步操作，失败后等待 1 秒再重试
+ * @param {Function} fn - 异步函数
+ * @param {number} maxRetries - 最大重试次数（默认 2）
+ * @param {string} label - 日志标签
+ * @returns {Promise<*>} fn 的返回值
+ */
+async function retryAsync(fn, maxRetries = 2, label = '') {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      console.warn(`[选址管线] ${label} 第 ${attempt + 1} 次失败，${1}秒后重试: ${err.message}`);
+      await sleep(1000);
+    }
+  }
 }
 
 function loadSharedConfig() {
@@ -197,6 +215,8 @@ async function runSitePipeline(userInput, options = {}) {
   console.log('═══════════════════════════════════════════');
   console.log(`  输入: ${userInput}\n`);
 
+  const deadline = Date.now() + 120000; // 全局超时 120 秒
+
   const sharedConfig = loadSharedConfig();
   const amapKey = resolveApiKey(options) || sharedConfig.amapWebServiceKey || '';
 
@@ -240,6 +260,12 @@ async function runSitePipeline(userInput, options = {}) {
   const areaResults = [];
 
   for (let areaIdx = 0; areaIdx < siteIntent.target_areas.length; areaIdx++) {
+    // 全局超时检查
+    if (Date.now() > deadline) {
+      console.warn('[选址管线] 超时，保存已完成的分析结果');
+      break;
+    }
+
     const areaName = siteIntent.target_areas[areaIdx];
     console.log(`\n── 扫描区域: ${areaName} ──`);
 
@@ -249,10 +275,14 @@ async function runSitePipeline(userInput, options = {}) {
     }
 
     // 地理编码获取坐标
-    const geoResult = await geocodeAddress(
-      siteIntent.city ? `${siteIntent.city}${areaName}` : areaName,
-      siteIntent.city || '',
-      amapKey,
+    const geoResult = await retryAsync(
+      () => geocodeAddress(
+        siteIntent.city ? `${siteIntent.city}${areaName}` : areaName,
+        siteIntent.city || '',
+        amapKey,
+      ),
+      2,
+      `地理编码 ${areaName}`,
     );
 
     if (!geoResult || !geoResult.lng || !geoResult.lat) {
@@ -267,11 +297,15 @@ async function runSitePipeline(userInput, options = {}) {
     await sleep(STAGE_DELAY);
 
     // 竞争扫描
-    const competition = await scanCompetition(lng, lat, amapKey, {
-      city: siteIntent.city,
-      areaName: areaName,
-      pageSize: 25,
-    });
+    const competition = await retryAsync(
+      () => scanCompetition(lng, lat, amapKey, {
+        city: siteIntent.city,
+        areaName: areaName,
+        pageSize: 25,
+      }),
+      2,
+      `竞争扫描 ${areaName}`,
+    );
 
     // 竞争扫描完成后稍等再启动商圈画像
     await sleep(STAGE_DELAY);
@@ -361,11 +395,15 @@ async function runSitePipeline(userInput, options = {}) {
   // 自动打开
   if (options.open) {
     console.log('[选址管线] 正在打开浏览器...');
-    try {
-      exec(`start "" "${reportPath}"`);  // Windows
-    } catch (_) {
-      try { exec(`open "${reportPath}"`); } catch (__) { /* macOS fallback */ }
-    }
+    const { spawn } = require('child_process');
+    const cmd = process.platform === 'darwin'
+      ? 'open'
+      : process.platform === 'win32'
+        ? 'start'
+        : 'xdg-open';
+    const args = process.platform === 'win32' ? ['', reportPath] : [reportPath];
+    const child = spawn(cmd, args, { detached: true, stdio: 'ignore', shell: process.platform === 'win32' });
+    child.unref();
   }
 
   // ======== 输出摘要 ========

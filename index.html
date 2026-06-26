@@ -1988,11 +1988,11 @@
         : totalMin + 'min';
 
       resultInfo.innerHTML =
-        '<span>\u{1F4CD} ' + (data.scenic_name || '景区') + (data.city ? ' \u00B7 ' + data.city : '') + '</span>' +
+        '<span>\u{1F4CD} ' + escapeHTML(data.scenic_name || '景区') + (data.city ? ' \u00B7 ' + escapeHTML(data.city) : '') + '</span>' +
         '<span>\u{1F3DB} ' + (data.poi_count || data.scenic_count || '?') + ' 个景点</span>' +
         (data.food_count ? '<span>\u{1F35C} ' + data.food_count + ' 家美食</span>' : '') +
-        '<span>\u23F1 ' + (data.total_duration || durStr) + '</span>' +
-        '<span>\u{1F6B6} ' + (data.walking_time || walkMin + 'min') + '</span>';
+        '<span>\u23F1 ' + escapeHTML(data.total_duration || durStr) + '</span>' +
+        '<span>\u{1F6B6} ' + escapeHTML(data.walking_time || walkMin + 'min') + '</span>';
 
       // Switch views
       welcomePanel.classList.add('hidden');
@@ -3218,14 +3218,14 @@
       if (markers && markers[index] && infoWindow) {
         var d = poi;
         var tagsHtml = (d.tags || []).map(function(t) {
-          return '<span class="poi-popup-tag">' + t + '</span>';
+          return '<span class="poi-popup-tag">' + escapeHTML(t) + '</span>';
         }).join('');
         var durText = d.duration_min >= 60
           ? Math.floor(d.duration_min / 60) + '小时' + (d.duration_min % 60 > 0 ? d.duration_min % 60 + '分钟' : '')
           : d.duration_min + '分钟';
         var photoHtml = '';
         if (d.photos && d.photos.length > 0) {
-          photoHtml = '<img class="poi-popup-photo" src="' + d.photos[0] + '" alt="' + d.name + '" onerror="this.style.display=\'none\'">';
+          photoHtml = '<img class="poi-popup-photo" src="' + escapeAttr(d.photos[0]) + '" alt="' + escapeAttr(d.name) + '" onerror="this.style.display=\'none\'">';
         }
         var ratingHtml = '';
         if (d.rating && d.rating > 0) {
@@ -3233,14 +3233,14 @@
         }
         var hoursHtml = '';
         if (d.business_hours) {
-          hoursHtml = '<div class="poi-popup-hours">\u{1F552} ' + d.business_hours + '</div>';
+          hoursHtml = '<div class="poi-popup-hours">\u{1F552} ' + escapeHTML(d.business_hours) + '</div>';
         }
         infoWindow.setContent(
           '<div class="poi-popup">' +
             photoHtml +
-            '<div class="poi-popup-title">' + d.name + '</div>' +
+            '<div class="poi-popup-title">' + escapeHTML(d.name) + '</div>' +
             ratingHtml +
-            '<div class="poi-popup-row">\u{1F4CD} ' + (d.address || '暂无地址信息') + '</div>' +
+            '<div class="poi-popup-row">\u{1F4CD} ' + escapeHTML(d.address || '暂无地址信息') + '</div>' +
             '<div class="poi-popup-row">\u23F1 建议游览: ' + durText + '</div>' +
             hoursHtml +
             (tagsHtml ? '<div class="poi-popup-tags">' + tagsHtml + '</div>' : '') +

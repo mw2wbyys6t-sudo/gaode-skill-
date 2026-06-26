@@ -354,6 +354,14 @@ async function buildScoreSection(score, areaName) {
         })],
       }),
     );
+  } else {
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 200 },
+        children: [new TextRun({ text: '（雷达图暂不可用，评分详见上方表格）', font: 'Arial', size: 20, color: '999999', italics: true })],
+      })
+    );
   }
 
   return children;

@@ -110,8 +110,8 @@
 - Python 3.8+（语音功能可选）
 - 高德 API Key（[免费申请](https://lbs.amap.com/)）
 - LLM API Key（推荐 DeepSeek，可选）
- -注意在创建高德API一定要选择web服务的。
-  
+
+> **注意**：在创建高德 API Key 时一定要选择"Web服务"类型。
 
 ### 安装
 
@@ -295,7 +295,7 @@ gaode-skill-/
 | 服务配套 | 20 | 互补业态评分 + 交通可达性 |
 | 立地条件 | 20 | 区域类型 + 街道可达性 + 物业可行性 |
 
-评级标准：85+ 优秀、70-84 良好、55-69 及格、54 以下不推荐。
+评级标准：80+ 优秀、60-79 良好、40-59 及格、40 以下不推荐。
 
 ## 语音导览
 
@@ -324,7 +324,7 @@ python python/tts_service.py --engine edge --port 5050
 |------|------|------|
 | GET | `/api/plan` | 完整旅游规划流水线 |
 | POST | `/api/chat` | 小次聊天（可自动触发规划或选址） |
-| POST | `/api/site` | 餐饮选址分析 |
+| GET | `/api/site-analysis` | 餐饮选址分析（端到端） |
 | POST | `/api/tts` | 单条语音合成 |
 | POST | `/api/tts/batch` | 批量语音合成 |
 | GET | `/api/tts/status` | TTS 引擎状态 |

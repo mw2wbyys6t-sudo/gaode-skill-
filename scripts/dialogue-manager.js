@@ -506,7 +506,8 @@ async function chat(userMessage, sessionId, options) {
 
   // 3. 构建系统提示词（基础 + 上下文）
   const currentState = sessionStore.getSessionState(sessionId);
-  const systemPrompt = XIAO_CI_SYSTEM_PROMPT + buildContextBlock(currentState);
+  const basePrompt = options.useSiteConsultant ? SITE_CONSULTANT_PROMPT : XIAO_CI_SYSTEM_PROMPT;
+  const systemPrompt = basePrompt + buildContextBlock(currentState);
 
   // 4. 记录用户消息
   sessionStore.addMessage(sessionId, 'user', userMessage, options.maxTurns || 10);

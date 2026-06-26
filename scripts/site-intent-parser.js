@@ -368,7 +368,7 @@ async function parseSiteIntent(userInput, config = {}) {
       const result = {
         restaurant_type: parsed.restaurant_type || '',
         city: parsed.city || '',
-        budget_rent: parsed.budget_rent || null,
+        budget_rent: parsed.budget_rent ?? null,
         target_areas: parsed.target_areas || [],
         store_type: parsed.store_type || '都可以',
         target_customers: parsed.target_customers || '',
